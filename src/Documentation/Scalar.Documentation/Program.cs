@@ -34,11 +34,90 @@ app.UseSwagger();
 // Configure Scalar with proper OpenAPI spec
 app.MapScalarApiReference(options =>
 {
-    options.Title = "ERP Prototype API Documentation";
+    options.Title = "ERP Prototype API Documentation - All Services";
     options.Theme = ScalarTheme.Purple;
     options.ShowSidebar = true;
     options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
 });
+
+// Add endpoint to serve aggregated OpenAPI spec
+app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient, ILogger<Program> logger) =>
+{
+    logger.LogInformation("📋 Generating aggregated OpenAPI specification");
+
+    var aggregatedSpec = new
+    {
+        openapi = "3.0.1",
+        info = new
+        {
+            title = "ERP Prototype - All Services API",
+            version = "v1",
+            description = "Aggregated API documentation for all ERP microservices"
+        },
+        servers = new[]
+        {
+            new { url = "http://localhost:5000", description = "API Gateway" }
+        },
+        paths = new Dictionary<string, object>(),
+        components = new
+        {
+            schemas = new Dictionary<string, object>()
+        }
+    };
+
+    var services = new[]
+    {
+        new { Name = "WeatherService", Url = "http://localhost:5001/swagger/v1/swagger.json", Prefix = "/api/weather" },
+        new { Name = "OrderService", Url = "http://localhost:5003/swagger/v1/swagger.json", Prefix = "/api/orders" },
+        new { Name = "InventoryService", Url = "http://localhost:5004/swagger/v1/swagger.json", Prefix = "/api/inventory" },
+        new { Name = "CustomerService", Url = "http://localhost:5005/swagger/v1/swagger.json", Prefix = "/api/customers" },
+        new { Name = "FinanceService", Url = "http://localhost:5006/swagger/v1/swagger.json", Prefix = "/api/finance" },
+        new { Name = "DocumentationService", Url = "http://localhost:5002/swagger/v1/swagger.json", Prefix = "/api/docs" }
+    };
+
+    var pathsDict = (Dictionary<string, object>)aggregatedSpec.paths;
+    var schemasDict = (Dictionary<string, object>)aggregatedSpec.components.schemas;
+
+    foreach (var service in services)
+    {
+        try
+        {
+            var specJson = await httpClient.GetStringAsync(service.Url);
+            var spec = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(specJson);
+
+            // Add paths with service prefix
+            if (spec.TryGetProperty("paths", out var paths))
+            {
+                foreach (var path in paths.EnumerateObject())
+                {
+                    var newPath = service.Prefix + path.Name;
+                    pathsDict[newPath] = System.Text.Json.JsonSerializer.Deserialize<object>(path.Value.GetRawText())!;
+                }
+            }
+
+            // Add schemas
+            if (spec.TryGetProperty("components", out var components) &&
+                components.TryGetProperty("schemas", out var schemas))
+            {
+                foreach (var schema in schemas.EnumerateObject())
+                {
+                    var schemaKey = $"{service.Name}_{schema.Name}";
+                    schemasDict[schemaKey] = System.Text.Json.JsonSerializer.Deserialize<object>(schema.Value.GetRawText())!;
+                }
+            }
+
+            logger.LogInformation("✅ {ServiceName} spec aggregated successfully", service.Name);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("⚠️ Failed to aggregate {ServiceName} spec: {Error}", service.Name, ex.Message);
+        }
+    }
+
+    return Results.Json(aggregatedSpec);
+})
+.WithName("GetAggregatedOpenApiSpec")
+.ExcludeFromDescription();
 
 // Middleware to log incoming requests
 app.Use(async (context, next) =>
@@ -48,8 +127,17 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Configure aggregated Scalar documentation
+app.MapScalarApiReference("/scalar/all", options =>
+{
+    options.Title = "🚀 ERP Prototype - All Services Combined";
+    options.Theme = ScalarTheme.Purple;
+    options.ShowSidebar = true;
+    options.OpenApiRoutePattern = "/swagger/v1/swagger-aggregated.json";
+});
+
 // API endpoints for documentation service
-app.MapGet("/", () => Results.Redirect("/scalar/v1"))
+app.MapGet("/", () => Results.Redirect("/scalar/all"))
 .WithName("RedirectToScalar")
 .ExcludeFromDescription();
 
