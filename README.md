@@ -62,19 +62,22 @@ This project demonstrates a microservices architecture using .NET 8 with YARP (Y
    ```bash
    # Terminal 1 - WeatherService
    dotnet run --project src\Services\Playground.WeatherService\Playground.WeatherService.csproj
-   
+
    # Terminal 2 - Documentation Service
    dotnet run --project src\Documentation\Scalar.Documentation\Scalar.Documentation.csproj
-   
+
    # Terminal 3 - BFF Gateway
    dotnet run --project src\Gateway\BFF.Gateway\BFF.Gateway.csproj
    ```
 
 3. **Test the integration**:
    ```bash
-   # Test weather service through gateway
+   # Test weather service through gateway (recommended)
    curl http://localhost:5000/api/weather/forecast
-   
+
+   # Test service mappings (Kubernetes-ready endpoint)
+   curl http://localhost:5000/api/gateway/services
+
    # Test direct access to services
    curl http://localhost:5001/weatherforecast
    curl http://localhost:5002/health
@@ -82,6 +85,7 @@ This project demonstrates a microservices architecture using .NET 8 with YARP (Y
 
 4. **Access documentation**:
    - Scalar API Documentation: http://localhost:5002/scalar/v1
+   - Gateway Service Mappings: http://localhost:5000/api/gateway/services
 
 ### Running with Docker
 
@@ -95,21 +99,43 @@ docker-compose up --build
 # Documentation: http://localhost:7002
 ```
 
-## Service Logging
+## Service Mapping & Logging
 
-The BFF Gateway implements service name logging that:
-1. **Identifies the target service** based on the request path
-2. **Logs the service name** with a 🚀 emoji for visibility
+The BFF Gateway uses a **JSON-based service mapping configuration** that enables:
+1. **Dynamic service discovery** - No hardcoded service logic
+2. **Kubernetes-ready scaling** - Services can be scaled independently
+3. **Centralized configuration** - All service mappings in one place
+4. **Extensible architecture** - Easy to add new services
+
+### Service Mapping Configuration (`servicemapping.json`)
+```json
+{
+  "ServiceMappings": [
+    {
+      "PathPrefix": "/api/weather",
+      "ServiceName": "WeatherService",
+      "DisplayName": "Weather Forecast Service",
+      "Description": "Provides weather forecast data and meteorological information"
+    }
+    // ... more services
+  ]
+}
+```
+
+### Service Logging Features:
+1. **Identifies the target service** using path prefix matching
+2. **Logs service details** with 🚀 emoji for visibility
 3. **Adds service headers** for internal tracking
-4. **Removes service headers** after processing with a 🧹 emoji
+4. **Removes service headers** after processing with 🧹 emoji
 
 Example logs:
 ```
-🚀 Request routed to service: WeatherService - Path: /api/weather/forecast
+✅ Loaded 6 service mappings from configuration
+🚀 Request routed to service: WeatherService (Weather Forecast Service) - Path: /api/weather/forecast
 🎯 WeatherService received request from gateway - Service: WeatherService
 🌤️ Generating weather forecast data
 🌤️ Weather forecast generated with 5 entries
-🧹 Service name header removed after gateway processing
+🧹 Service headers removed after gateway processing
 ```
 
 ## API Routes
@@ -117,6 +143,8 @@ Example logs:
 ### Through Gateway (Port 5000)
 - `GET /api/weather/forecast` → Routes to WeatherService `/weatherforecast`
 - `GET /api/docs/*` → Routes to Documentation Service
+- `GET /api/gateway/services` → Get all configured service mappings (Kubernetes-ready)
+- `GET /health` → Gateway health check
 
 ### Direct Access
 - **WeatherService (Port 5001)**:

@@ -1,0 +1,40 @@
+{
+  "ServiceMappings": [
+    {
+      "PathPrefix": "/api/weather",
+      "ServiceName": "WeatherService",
+      "DisplayName": "Weather Forecast Service",
+      "Description": "Provides weather forecast data and meteorological information"
+    },
+    {
+      "PathPrefix": "/api/docs",
+      "ServiceName": "DocumentationService", 
+      "DisplayName": "API Documentation Service",
+      "Description": "Centralized API documentation using Scalar"
+    },
+    {
+      "PathPrefix": "/api/inventory",
+      "ServiceName": "InventoryService",
+      "DisplayName": "Inventory Management Service", 
+      "Description": "Manages product inventory and stock levels"
+    },
+    {
+      "PathPrefix": "/api/orders",
+      "ServiceName": "OrderService",
+      "DisplayName": "Order Management Service",
+      "Description": "Handles order processing and fulfillment"
+    },
+    {
+      "PathPrefix": "/api/customers",
+      "ServiceName": "CustomerService",
+      "DisplayName": "Customer Management Service",
+      "Description": "Manages customer data and relationships"
+    },
+    {
+      "PathPrefix": "/api/finance",
+      "ServiceName": "FinanceService", 
+      "DisplayName": "Financial Management Service",
+      "Description": "Handles accounting, invoicing, and financial reporting"
+    }
+  ]
+}

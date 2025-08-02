@@ -2,7 +2,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Weather Service API",
+        Version = "v1",
+        Description = "Provides weather forecast data for the ERP Prototype system",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Weather Service Team",
+            Email = "weather@erpprototype.com"
+        }
+    });
+});
 builder.Services.AddLogging();
 
 var app = builder.Build();
@@ -57,11 +70,17 @@ app.MapGet("/weatherforecast", (ILogger<Program> logger) =>
     return forecast;
 })
 .WithName("GetWeatherForecast")
+.WithTags("Weather")
+.WithSummary("Get weather forecast")
+.WithDescription("Returns a 5-day weather forecast with temperature and weather conditions")
 .WithOpenApi();
 
 // Health check endpoint
 app.MapGet("/health", () => new { Status = "Healthy", Service = "WeatherService", Timestamp = DateTime.UtcNow })
 .WithName("HealthCheck")
+.WithTags("Health")
+.WithSummary("Health check endpoint")
+.WithDescription("Returns the health status of the Weather Service")
 .WithOpenApi();
 
 app.Run();

@@ -1,6 +1,11 @@
 using Yarp.ReverseProxy.Configuration;
+using BFF.Gateway.Services;
+using BFF.Gateway.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load service mappings from JSON file
+builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
 
 // Add YARP services
 builder.Services.AddReverseProxy()
@@ -9,43 +14,67 @@ builder.Services.AddReverseProxy()
 // Add logging
 builder.Services.AddLogging();
 
+// Add service mapping service
+builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
+
 var app = builder.Build();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    var serviceMappingService = context.RequestServices.GetRequiredService<IServiceMappingService>();
 
-    // Extract service name from the path
+    // Extract service name from the path using service mapping
     var path = context.Request.Path.Value;
-    string? serviceName = null;
+    var serviceMapping = serviceMappingService.GetServiceMapping(path ?? string.Empty);
 
-    if (path?.StartsWith("/api/weather") == true)
+    if (serviceMapping != null)
     {
-        serviceName = "WeatherService";
+        logger.LogInformation("🚀 Request routed to service: {ServiceName} ({DisplayName}) - Path: {Path}",
+            serviceMapping.ServiceName, serviceMapping.DisplayName, path);
+
+        // Add service information to request headers for internal tracking
+        context.Request.Headers["X-Service-Name"] = serviceMapping.ServiceName;
+        context.Request.Headers["X-Service-Display-Name"] = serviceMapping.DisplayName;
     }
-    else if (path?.StartsWith("/api/docs") == true)
+    else
     {
-        serviceName = "DocumentationService";
-    }
-
-    if (!string.IsNullOrEmpty(serviceName))
-    {
-        logger.LogInformation("🚀 Request routed to service: {ServiceName} - Path: {Path}", serviceName, path);
-
-        // Add service name to request headers for internal tracking
-        context.Request.Headers["X-Service-Name"] = serviceName;
+        logger.LogInformation("🔍 Request to unmapped path: {Path}", path);
     }
 
     await next();
 
-    // Remove service name from response headers (clean up after gateway)
+    // Remove service headers from response (clean up after gateway)
     if (context.Response.Headers.ContainsKey("X-Service-Name"))
     {
         context.Response.Headers.Remove("X-Service-Name");
-        logger.LogInformation("🧹 Service name header removed after gateway processing");
+        context.Response.Headers.Remove("X-Service-Display-Name");
+        logger.LogInformation("🧹 Service headers removed after gateway processing");
     }
 });
+
+// API endpoint to expose service mappings (useful for Kubernetes service discovery)
+app.MapGet("/api/gateway/services", (IServiceMappingService serviceMappingService) =>
+{
+    var mappings = serviceMappingService.GetAllMappings().Select(m => new
+    {
+        pathPrefix = m.PathPrefix,
+        serviceName = m.ServiceName,
+        displayName = m.DisplayName,
+        description = m.Description
+    });
+
+    return Results.Ok(new { services = mappings, timestamp = DateTime.UtcNow });
+})
+.WithName("GetServiceMappings")
+.WithTags("Gateway")
+.WithSummary("Get all service mappings configured in the gateway");
+
+// Health check endpoint
+app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", Timestamp = DateTime.UtcNow })
+.WithName("GatewayHealthCheck")
+.WithTags("Health");
 
 // Configure YARP
 app.MapReverseProxy();
