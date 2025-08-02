@@ -53,6 +53,14 @@ app.MapGet("/", () => Results.Redirect("/scalar/v1"))
 .WithName("RedirectToScalar")
 .ExcludeFromDescription();
 
+// Hello World endpoint
+app.MapGet("/hello", () => new { Message = "Hello from Documentation Service!", Service = "DocumentationService", Timestamp = DateTime.UtcNow })
+.WithName("HelloWorld")
+.WithTags("General")
+.WithSummary("Hello World endpoint")
+.WithDescription("Returns a hello message from the Documentation Service")
+.WithOpenApi();
+
 app.MapGet("/health", () => new { Status = "Healthy", Service = "DocumentationService", Timestamp = DateTime.UtcNow })
 .WithName("HealthCheck")
 .WithTags("Health")

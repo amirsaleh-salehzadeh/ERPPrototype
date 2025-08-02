@@ -1,0 +1,6 @@
+@ERP.InventoryService_HostAddress = http://localhost:5043
+
+GET {{ERP.InventoryService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

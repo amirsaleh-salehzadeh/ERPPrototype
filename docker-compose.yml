@@ -20,6 +20,10 @@ services:
     depends_on:
       - weather-service
       - documentation-service
+      - order-service
+      - inventory-service
+      - customer-service
+      - finance-service
     networks:
       - erp-network
 
@@ -51,6 +55,82 @@ services:
     ports:
       - "7002:80"
       - "7445:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+  # Order Service
+  order-service:
+    build:
+      context: .
+      dockerfile: src/Services/ERP.OrderService/Dockerfile
+    container_name: erp-order-service
+    ports:
+      - "7003:80"
+      - "7446:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: .
+      dockerfile: src/Services/ERP.InventoryService/Dockerfile
+    container_name: erp-inventory-service
+    ports:
+      - "7004:80"
+      - "7447:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+  # Customer Service
+  customer-service:
+    build:
+      context: .
+      dockerfile: src/Services/ERP.CustomerService/Dockerfile
+    container_name: erp-customer-service
+    ports:
+      - "7005:80"
+      - "7448:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+  # Finance Service
+  finance-service:
+    build:
+      context: .
+      dockerfile: src/Services/ERP.FinanceService/Dockerfile
+    container_name: erp-finance-service
+    ports:
+      - "7006:80"
+      - "7449:443"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80;https://+:443

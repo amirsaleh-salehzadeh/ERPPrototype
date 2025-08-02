@@ -75,6 +75,14 @@ app.MapGet("/weatherforecast", (ILogger<Program> logger) =>
 .WithDescription("Returns a 5-day weather forecast with temperature and weather conditions")
 .WithOpenApi();
 
+// Hello World endpoint
+app.MapGet("/hello", () => new { Message = "Hello from Weather Service!", Service = "WeatherService", Timestamp = DateTime.UtcNow })
+.WithName("HelloWorld")
+.WithTags("General")
+.WithSummary("Hello World endpoint")
+.WithDescription("Returns a hello message from the Weather Service")
+.WithOpenApi();
+
 // Health check endpoint
 app.MapGet("/health", () => new { Status = "Healthy", Service = "WeatherService", Timestamp = DateTime.UtcNow })
 .WithName("HealthCheck")
