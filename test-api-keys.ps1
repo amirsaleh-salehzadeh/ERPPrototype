@@ -96,8 +96,9 @@ Write-Host "Testing Complete!" -ForegroundColor Cyan
 Write-Host "===================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Access Documentation:" -ForegroundColor Yellow
-Write-Host "- Scalar (All Services): http://localhost:5002/scalar/all" -ForegroundColor White
-Write-Host "- Scalar via Gateway: http://localhost:5000/api/docs/scalar/all" -ForegroundColor White
+Write-Host "- Scalar (Direct - No Auth): http://localhost:5002/scalar/all" -ForegroundColor White
+Write-Host "- Scalar (Via Gateway - Requires API Key): http://localhost:5000/api/docs/scalar/all" -ForegroundColor White
+Write-Host "- Helper HTML Page: scalar-with-api-key.html" -ForegroundColor White
 Write-Host "- Identity Service: http://localhost:5007/swagger" -ForegroundColor White
 Write-Host ""
 Write-Host "Your API Keys:" -ForegroundColor Yellow

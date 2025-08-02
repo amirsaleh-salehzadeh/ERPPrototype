@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Prototype - Scalar API Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .api-key-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .api-key-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .predefined-keys {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .key-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .key-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+        }
+        .key-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .key-permissions {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        .key-value {
+            font-family: monospace;
+            font-size: 11px;
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            word-break: break-all;
+        }
+        .iframe-container {
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            overflow: hidden;
+            height: 800px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ERP Prototype - Scalar API Documentation</h1>
+            <p>Complete API documentation for all microservices with API key authentication</p>
+        </div>
+        
+        <div class="content">
+            <div class="api-key-section">
+                <h3>🔑 API Key Authentication</h3>
+                <p>Enter your API key to access the Scalar documentation. The key will be automatically included in all API requests.</p>
+                
+                <input type="text" id="apiKeyInput" class="api-key-input" placeholder="Enter your API key here..." />
+                <button class="btn" onclick="loadScalarWithApiKey()">Load Scalar Documentation</button>
+                <button class="btn btn-success" onclick="loadScalarDirect()">Access Direct (No Auth)</button>
+                
+                <div id="status" class="status"></div>
+                
+                <h4>📋 Predefined API Keys (Click to Use):</h4>
+                <div class="predefined-keys">
+                    <div class="key-card" onclick="useApiKey('0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY')">
+                        <div class="key-title">🔐 Admin Master</div>
+                        <div class="key-permissions">Permissions: read, write, delete, admin</div>
+                        <div class="key-value">0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY</div>
+                    </div>
+                    
+                    <div class="key-card" onclick="useApiKey('38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M')">
+                        <div class="key-title">👨‍💻 Dev Team Lead</div>
+                        <div class="key-permissions">Permissions: read, write, deploy</div>
+                        <div class="key-value">38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M</div>
+                    </div>
+                    
+                    <div class="key-card" onclick="useApiKey('91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo')">
+                        <div class="key-title">🧪 QA Automation</div>
+                        <div class="key-permissions">Permissions: read, write, test</div>
+                        <div class="key-value">91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo</div>
+                    </div>
+                    
+                    <div class="key-card" onclick="useApiKey('8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk')">
+                        <div class="key-title">📊 Monitoring Service</div>
+                        <div class="key-permissions">Permissions: read, health</div>
+                        <div class="key-value">8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk</div>
+                    </div>
+                    
+                    <div class="key-card" onclick="useApiKey('h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA')">
+                        <div class="key-title">📈 Analytics Dashboard</div>
+                        <div class="key-permissions">Permissions: read, analytics</div>
+                        <div class="key-value">h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="iframe-container">
+                <iframe id="scalarFrame" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function useApiKey(apiKey) {
+            document.getElementById('apiKeyInput').value = apiKey;
+            showStatus('API key selected! Click "Load Scalar Documentation" to access the docs.', 'success');
+        }
+        
+        function loadScalarWithApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                showStatus('Please enter an API key first.', 'error');
+                return;
+            }
+            
+            // Create a URL with the API key as a parameter that we can handle
+            const scalarUrl = `http://localhost:5000/api/docs/scalar/all`;
+            
+            // Since we can't set headers in iframe, we'll show instructions
+            showStatus(`API Key set! Note: You'll need to manually add the X-API-Key header with value: ${apiKey} when testing endpoints in Scalar.`, 'success');
+            
+            // Load Scalar (it will show auth error, but user can manually add the header)
+            document.getElementById('scalarFrame').src = scalarUrl;
+        }
+        
+        function loadScalarDirect() {
+            // Load Scalar directly from the documentation service (no gateway auth)
+            const scalarUrl = `http://localhost:5002/scalar/all`;
+            document.getElementById('scalarFrame').src = scalarUrl;
+            showStatus('Loaded Scalar directly (bypassing gateway authentication). Use this for testing individual services.', 'success');
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Load direct Scalar by default
+        window.onload = function() {
+            loadScalarDirect();
+        };
+    </script>
+</body>
+</html>

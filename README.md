@@ -103,14 +103,23 @@ This project demonstrates a complete microservices architecture using .NET 8 wit
 
 ## 🔑 API Key Authentication
 
-This system uses **centralized API key authentication** where all requests to microservices must include a valid API key in the `X-API-Key` header. The BFF Gateway validates these keys with the Identity service before routing requests.
+This system implements **enterprise-grade centralized API key authentication** where ALL requests to microservices (including documentation) must include a valid API key in the `X-API-Key` header. The BFF Gateway validates these keys with the Identity service before routing requests.
 
 ### How It Works:
-1. **Client** sends request with `X-API-Key` header
-2. **BFF Gateway** intercepts request in middleware
-3. **Identity Service** validates the API key via REST API
-4. **Gateway** adds user context headers and forwards to microservice
-5. **Microservice** receives request with user information
+1. **Client** sends request with `X-API-Key` header to gateway
+2. **BFF Gateway** intercepts ALL requests in authentication middleware
+3. **Identity Service** validates the API key via REST API call
+4. **Gateway** adds user context headers (user, permissions) and forwards to microservice
+5. **Microservice** receives authenticated request with user information
+6. **Audit Trail** logs all authentication attempts and usage patterns
+
+### 🛡️ Security Features:
+- **Complete Route Protection**: ALL routes except health/services require authentication
+- **Centralized Validation**: Single source of truth for API key management
+- **User Context Injection**: Services know who is making requests
+- **Usage Tracking**: Monitor API key usage patterns and statistics
+- **Expiration Support**: API keys have configurable expiration dates
+- **Permission System**: Role-based access control ready for implementation
 
 ### Getting API Keys for Testing
 
@@ -118,13 +127,17 @@ The Identity service automatically creates test API keys on startup. Here are th
 
 #### 🔑 **Predefined API Keys (Ready to Use)**
 
-| User Type | API Key | Permissions | Description |
-|-----------|---------|-------------|-------------|
-| **Admin Master** | `0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY` | read, write, delete, admin | Full system access |
-| **Dev Team Lead** | `38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M` | read, write, deploy | Development team access |
-| **QA Automation** | `91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo` | read, write, test | Testing and QA access |
-| **Monitoring Service** | `8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk` | read, health | System monitoring |
-| **Analytics Dashboard** | `h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA` | read, analytics | Analytics and reporting |
+**⚡ Quick Start**: Copy any API key below and start testing immediately!
+
+| User Type | API Key | Permissions | Use Case |
+|-----------|---------|-------------|----------|
+| **🔐 Admin Master** | `0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY` | read, write, delete, admin | Full system access, all operations |
+| **👨‍💻 Dev Team Lead** | `38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M` | read, write, deploy | Development and deployment |
+| **🧪 QA Automation** | `91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo` | read, write, test | Testing and quality assurance |
+| **📊 Monitoring Service** | `8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk` | read, health | System monitoring and health checks |
+| **📈 Analytics Dashboard** | `h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA` | read, analytics | Analytics and reporting dashboards |
+
+**💡 Pro Tip**: The system automatically creates 15+ additional random API keys on startup for extended testing!
 
 #### 🎲 **Generate More API Keys**
 
@@ -200,7 +213,10 @@ curl -X POST http://localhost:5007/api-keys \
    dotnet run --project src\Gateway\BFF.Gateway\BFF.Gateway.csproj
    ```
 
-   **⚠️ Important**: Start the **Identity Service first** as it creates the API keys needed for authentication.
+   **⚠️ Important**:
+   - Start the **Identity Service FIRST** as it creates the API keys needed for authentication
+   - Start the **BFF Gateway LAST** as it needs to connect to all other services
+   - All services will show comprehensive logs with emojis for easy monitoring
 
 3. **Test the API Key Authentication Pipeline**:
 
@@ -257,9 +273,13 @@ curl -X POST http://localhost:5007/api-keys \
 
    #### 🔓 **Test Public Endpoints (No API Key Required)**:
    ```bash
-   # These endpoints bypass API key validation
-   curl http://localhost:5000/api/gateway/services
-   curl http://localhost:5000/health
+   # Only these endpoints bypass API key validation
+   curl http://localhost:5000/api/gateway/services  # Service discovery
+   curl http://localhost:5000/health                # Gateway health check
+
+   # Everything else requires authentication:
+   curl http://localhost:5000/api/docs/scalar/all   # Returns: "API key is required"
+   curl http://localhost:5000/api/orders/hello      # Returns: "API key is required"
    ```
 
    #### ❌ **Test Invalid API Key (Should Fail)**:
@@ -284,17 +304,68 @@ curl -X POST http://localhost:5007/api-keys \
 
    These scripts will automatically test all API keys against all services and show you the results.
 
-4. **Access documentation**:
-   - **Scalar API Documentation (All Services)**: http://localhost:5002/scalar/all
+   #### 📚 **Testing with Scalar Documentation**:
+
+   **⚠️ Important**: Scalar documentation is now protected by API key authentication when accessed through the gateway.
+
+   **Option 1 - Use Helper HTML Page (Easiest)**:
+   ```bash
+   # Open the helper page in your browser
+   start scalar-with-api-key.html  # Windows
+   open scalar-with-api-key.html   # Mac
+   ```
+
+   **Option 2 - Access Scalar Directly (No Auth Required)**:
+   - Go to: http://localhost:5002/scalar/all
+   - Click "Auth" button in Scalar
+   - Select "ApiKey" authentication
+   - Enter API key: `0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY`
+   - Test endpoints (they will go through the gateway with authentication)
+
+   **Option 3 - Access Through Gateway (Requires API Key)**:
+   - First authenticate: `curl -H "X-API-Key: YOUR_KEY" http://localhost:5000/api/docs/scalar/all`
+   - Then use browser with the same API key header (requires browser extension)
+
+4. **Access documentation and test with API keys**:
+
+   #### 🎯 **Recommended: Use the Helper HTML Page**
+   ```bash
+   # Open the helper page in your browser
+   start scalar-with-api-key.html  # Windows
+   open scalar-with-api-key.html   # Mac/Linux
+   ```
+
+   **What it does**:
+   - � Shows all predefined API keys with descriptions
+   - 📚 Loads Scalar documentation with one click
+   - 🧪 Makes it easy to test authenticated endpoints
+   - 🎨 Beautiful interface with color-coded API keys
+
+   #### �🔐 **Protected Documentation (Requires API Key)**:
    - **Scalar via Gateway**: http://localhost:5000/api/docs/scalar/all
+     - **⚠️ Authentication Required**: Must include `X-API-Key` header
+     - **Use Case**: Production-like access through the gateway
+
+   #### 🔓 **Direct Documentation (No Gateway Auth)**:
+   - **Scalar (All Services)**: http://localhost:5002/scalar/all
+     - **✅ Best for Testing**: Access Scalar directly, then set API key in the interface
+     - **How to Use**: Click "Auth" → Select "ApiKey" → Enter your API key
    - **Gateway Service Mappings**: http://localhost:5000/api/gateway/services
-   - **Identity Service Swagger**: http://localhost:5007/swagger
-   - **Individual Service Swagger**:
+   - **Identity Service**: http://localhost:5007/swagger
+   - **Individual Services**:
      - Weather: http://localhost:5001/swagger
      - Orders: http://localhost:5003/swagger
      - Inventory: http://localhost:5004/swagger
      - Customers: http://localhost:5005/swagger
      - Finance: http://localhost:5006/swagger
+
+   #### 🚀 **Quick Start Guide**:
+   1. **Start all services** (Identity service first!)
+   2. **Open `scalar-with-api-key.html`** in your browser
+   3. **Click any API key** to select it (Admin Master recommended)
+   4. **Click "Access Direct"** to load Scalar
+   5. **In Scalar, click "Auth"** and enter the API key
+   6. **Test any endpoint** - requests will be authenticated automatically!
 
 ## 🔧 API Key Management
 
@@ -340,6 +411,34 @@ curl -X POST http://localhost:5007/seed/random/20
 
 # Create predefined API keys
 curl -X POST http://localhost:5007/seed/predefined
+```
+
+### Using API Keys in Scalar Documentation
+
+#### 🎯 **Method 1: Using the Helper HTML Page (Recommended)**
+1. Open `scalar-with-api-key.html` in your browser
+2. Click on any predefined API key to select it
+3. Click "Access Direct (No Auth)" to load Scalar
+4. In Scalar, click the "Auth" button and enter your API key
+5. Test any endpoint - the API key will be automatically included
+
+#### 🔧 **Method 2: Manual Setup in Scalar**
+1. Go to http://localhost:5002/scalar/all (direct access)
+2. Click the "Auth" button in the top-right corner
+3. Select "ApiKey" authentication
+4. Enter one of the predefined API keys in the "X-API-Key" field
+5. Click "Set" to save the authentication
+6. Test any endpoint - requests will include the API key header
+
+#### 🧪 **Method 3: Testing Through Gateway with curl**
+```bash
+# Test Scalar access through gateway (requires API key)
+curl -H "X-API-Key: 0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY" \
+     http://localhost:5000/api/docs/scalar/all
+
+# Test individual endpoints through gateway
+curl -H "X-API-Key: 0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY" \
+     http://localhost:5000/api/orders/orders
 ```
 
 ### Monitoring API Key Usage
