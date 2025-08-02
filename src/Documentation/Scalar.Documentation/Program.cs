@@ -17,6 +17,30 @@ builder.Services.AddSwaggerGen(c =>
             Email = "dev@erpprototype.com"
         }
     });
+
+    // Add API Key authentication to OpenAPI spec
+    c.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Name = "X-API-Key",
+        Description = "API Key for authentication. Use one of the predefined keys from the README."
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 builder.Services.AddLogging();
 
@@ -38,6 +62,7 @@ app.MapScalarApiReference(options =>
     options.Theme = ScalarTheme.Purple;
     options.ShowSidebar = true;
     options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
+    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
 });
 
 // Add endpoint to serve aggregated OpenAPI spec
@@ -52,16 +77,33 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient, 
         {
             title = "ERP Prototype - All Services API",
             version = "v1",
-            description = "Aggregated API documentation for all ERP microservices"
+            description = "Aggregated API documentation for all ERP microservices. All endpoints require API key authentication."
         },
         servers = new[]
         {
-            new { url = "http://localhost:5000", description = "API Gateway" }
+            new { url = "http://localhost:5000", description = "API Gateway (Requires API Key)" }
         },
         paths = new Dictionary<string, object>(),
         components = new
         {
-            schemas = new Dictionary<string, object>()
+            schemas = new Dictionary<string, object>(),
+            securitySchemes = new Dictionary<string, object>
+            {
+                ["ApiKey"] = new
+                {
+                    type = "apiKey",
+                    @in = "header",
+                    name = "X-API-Key",
+                    description = "API Key for authentication. Use one of the predefined keys: Admin Master, Dev Team Lead, QA Automation, Monitoring Service, or Analytics Dashboard."
+                }
+            }
+        },
+        security = new[]
+        {
+            new Dictionary<string, object[]>
+            {
+                ["ApiKey"] = Array.Empty<object>()
+            }
         }
     };
 
@@ -134,6 +176,7 @@ app.MapScalarApiReference("/scalar/all", options =>
     options.Theme = ScalarTheme.Purple;
     options.ShowSidebar = true;
     options.OpenApiRoutePattern = "/swagger/v1/swagger-aggregated.json";
+    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
 });
 
 // API endpoints for documentation service

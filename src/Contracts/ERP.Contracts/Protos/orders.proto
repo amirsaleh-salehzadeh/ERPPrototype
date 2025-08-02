@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+option csharp_namespace = "ERP.Contracts.Orders";
+
+package orders;
+
+// Order Service for managing orders
+service OrderService {
+  // Get order by ID
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  
+  // Get orders by customer
+  rpc GetOrdersByCustomer(GetOrdersByCustomerRequest) returns (GetOrdersByCustomerResponse);
+  
+  // Create new order
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  
+  // Update order status
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+  
+  // Get order statistics
+  rpc GetOrderStats(GetOrderStatsRequest) returns (GetOrderStatsResponse);
+}
+
+// Order messages
+message Order {
+  int32 id = 1;
+  int32 customer_id = 2;
+  int64 order_date = 3;
+  OrderStatus status = 4;
+  double total_amount = 5;
+  string description = 6;
+}
+
+enum OrderStatus {
+  PENDING = 0;
+  PROCESSING = 1;
+  SHIPPED = 2;
+  DELIVERED = 3;
+  CANCELLED = 4;
+}
+
+// Request/Response messages
+message GetOrderRequest {
+  int32 order_id = 1;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+  bool found = 2;
+  string error_message = 3;
+}
+
+message GetOrdersByCustomerRequest {
+  int32 customer_id = 1;
+}
+
+message GetOrdersByCustomerResponse {
+  repeated Order orders = 1;
+  int32 total_count = 2;
+}
+
+message CreateOrderRequest {
+  int32 customer_id = 1;
+  double total_amount = 2;
+  string description = 3;
+}
+
+message CreateOrderResponse {
+  Order order = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message UpdateOrderStatusRequest {
+  int32 order_id = 1;
+  OrderStatus status = 2;
+}
+
+message UpdateOrderStatusResponse {
+  Order order = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetOrderStatsRequest {
+  // Empty for now, could add date filters later
+}
+
+message GetOrderStatsResponse {
+  int32 total_orders = 1;
+  int32 pending_orders = 2;
+  int32 processing_orders = 3;
+  int32 shipped_orders = 4;
+  int32 delivered_orders = 5;
+  double total_revenue = 6;
+  double average_order_value = 7;
+}

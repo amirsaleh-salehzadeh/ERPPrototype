@@ -1,0 +1,5 @@
+{
+  "apiKey": "5gQ0YhBioKD61yj-F-ir9NTJbmF_wwXlu8C2tKfR5LA",
+  "serviceName": "OrderService",
+  "endpoint": "/api/orders/hello"
+}

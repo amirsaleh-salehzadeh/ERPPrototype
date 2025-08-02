@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+option csharp_namespace = "ERP.Contracts.Identity";
+
+package identity;
+
+// Identity Service for API Key validation and authentication
+service IdentityService {
+  // Validate API Key
+  rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+  
+  // Create new API Key
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  
+  // Revoke API Key
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+  
+  // Get API Key info
+  rpc GetApiKeyInfo(GetApiKeyInfoRequest) returns (GetApiKeyInfoResponse);
+}
+
+// Request/Response messages for API Key validation
+message ValidateApiKeyRequest {
+  string api_key = 1;
+  string service_name = 2;
+  string endpoint = 3;
+}
+
+message ValidateApiKeyResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+  string user_name = 3;
+  repeated string permissions = 4;
+  string error_message = 5;
+  int64 expires_at = 6;
+}
+
+// Request/Response messages for creating API Keys
+message CreateApiKeyRequest {
+  string user_name = 1;
+  string description = 2;
+  repeated string permissions = 3;
+  int32 expires_in_days = 4;
+}
+
+message CreateApiKeyResponse {
+  string api_key = 1;
+  string key_id = 2;
+  int64 created_at = 3;
+  int64 expires_at = 4;
+  bool success = 5;
+  string error_message = 6;
+}
+
+// Request/Response messages for revoking API Keys
+message RevokeApiKeyRequest {
+  string api_key = 1;
+  string key_id = 2;
+}
+
+message RevokeApiKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Request/Response messages for getting API Key info
+message GetApiKeyInfoRequest {
+  string api_key = 1;
+}
+
+message GetApiKeyInfoResponse {
+  string key_id = 1;
+  string user_name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  int64 created_at = 5;
+  int64 expires_at = 6;
+  bool is_active = 7;
+  int32 usage_count = 8;
+}

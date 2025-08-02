@@ -1,6 +1,7 @@
 using Yarp.ReverseProxy.Configuration;
 using BFF.Gateway.Services;
 using BFF.Gateway.Models;
+using BFF.Gateway.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ builder.Services.AddLogging();
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 
 var app = builder.Build();
+
+// Add API key validation middleware
+app.UseMiddleware<ApiKeyValidationMiddleware>();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
@@ -50,6 +54,9 @@ app.Use(async (context, next) =>
     {
         context.Response.Headers.Remove("X-Service-Name");
         context.Response.Headers.Remove("X-Service-Display-Name");
+        context.Response.Headers.Remove("X-User-Id");
+        context.Response.Headers.Remove("X-User-Name");
+        context.Response.Headers.Remove("X-User-Permissions");
         logger.LogInformation("🧹 Service headers removed after gateway processing");
     }
 });

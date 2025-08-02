@@ -1,0 +1,6 @@
+{
+  "userName": "testuser",
+  "description": "Test API Key",
+  "permissions": ["read", "write"],
+  "expiresInDays": 30
+}

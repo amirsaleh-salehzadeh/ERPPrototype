@@ -8,11 +8,35 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "ERP Order Service API",
         Version = "v1",
-        Description = "Handles order processing, fulfillment, and order management for the ERP system",
+        Description = "Handles order processing, fulfillment, and order management for the ERP system. All endpoints require API key authentication when accessed through the gateway.",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
             Name = "Order Service Team",
             Email = "orders@erpprototype.com"
+        }
+    });
+
+    // Add API Key authentication to OpenAPI spec
+    c.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Name = "X-API-Key",
+        Description = "API Key for authentication. Required when accessing through the API Gateway."
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
         }
     });
 });

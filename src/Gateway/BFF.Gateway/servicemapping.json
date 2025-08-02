@@ -32,9 +32,15 @@
     },
     {
       "PathPrefix": "/api/finance",
-      "ServiceName": "FinanceService", 
+      "ServiceName": "FinanceService",
       "DisplayName": "Financial Management Service",
       "Description": "Handles accounting, invoicing, and financial reporting"
+    },
+    {
+      "PathPrefix": "/api/identity",
+      "ServiceName": "IdentityService",
+      "DisplayName": "Identity Management Service",
+      "Description": "Handles API key validation, authentication, and authorization"
     }
   ]
 }
