@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # BFF Gateway Service
+  gateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/BFF.Gateway/Dockerfile
+    container_name: erp-gateway
+    ports:
+      - "7000:80"
+      - "7443:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    depends_on:
+      - weather-service
+      - documentation-service
+    networks:
+      - erp-network
+
+  # Weather Service
+  weather-service:
+    build:
+      context: .
+      dockerfile: src/Services/Playground.WeatherService/Dockerfile
+    container_name: erp-weather-service
+    ports:
+      - "7001:80"
+      - "7444:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+  # Documentation Service (Scalar)
+  documentation-service:
+    build:
+      context: .
+      dockerfile: src/Documentation/Scalar.Documentation/Dockerfile
+    container_name: erp-documentation-service
+    ports:
+      - "7002:80"
+      - "7445:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+    volumes:
+      - ~/.aspnet/https:/https:ro
+    networks:
+      - erp-network
+
+networks:
+  erp-network:
+    driver: bridge
