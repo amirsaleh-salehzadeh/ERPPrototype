@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+option csharp_namespace = "ERP.Contracts.Weather";
+
+package weather;
+
+import "google/protobuf/timestamp.proto";
+
+// Weather Service for meteorological data
+service WeatherService {
+  // Get hello message
+  rpc GetHello(HelloRequest) returns (HelloResponse);
+  
+  // Get weather forecast
+  rpc GetWeatherForecast(WeatherForecastRequest) returns (WeatherForecastResponse);
+  
+  // Get health status
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+}
+
+// Common messages
+message HelloRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message HelloResponse {
+  string message = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+// Weather-specific messages
+message WeatherForecastRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 days = 4; // Number of days to forecast (default 5)
+}
+
+message WeatherForecastResponse {
+  repeated WeatherForecast forecasts = 1;
+  string generated_by = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}
+
+message WeatherForecast {
+  google.protobuf.Timestamp date = 1;
+  int32 temperature_c = 2;
+  int32 temperature_f = 3;
+  string summary = 4;
+  int32 humidity = 5;
+  double wind_speed = 6;
+  string wind_direction = 7;
+}

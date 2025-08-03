@@ -1,5 +1,5 @@
-using System.Text;
-using System.Text.Json;
+using BFF.Gateway.Services;
+using ERP.Contracts.Identity;
 
 namespace BFF.Gateway.Middleware;
 
@@ -7,17 +7,13 @@ public class ApiKeyValidationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyValidationMiddleware> _logger;
-    private readonly HttpClient _httpClient;
-    private readonly string _identityServiceUrl;
+    private readonly IGrpcClientService _grpcClientService;
 
-    public ApiKeyValidationMiddleware(RequestDelegate next, ILogger<ApiKeyValidationMiddleware> logger, IConfiguration configuration)
+    public ApiKeyValidationMiddleware(RequestDelegate next, ILogger<ApiKeyValidationMiddleware> logger, IGrpcClientService grpcClientService)
     {
         _next = next;
         _logger = logger;
-        _httpClient = new HttpClient();
-
-        // Use REST API for Identity service communication
-        _identityServiceUrl = configuration.GetValue<string>("IdentityService:RestUrl") ?? "http://localhost:5007";
+        _grpcClientService = grpcClientService;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -42,42 +38,28 @@ public class ApiKeyValidationMiddleware
 
         try
         {
-            // Validate API key with Identity service via REST API
-            var requestPayload = new
+            // Validate API key with Identity service via gRPC
+            var request = new ValidateApiKeyRequest
             {
                 ApiKey = apiKey,
                 ServiceName = ExtractServiceName(context.Request.Path),
                 Endpoint = context.Request.Path.ToString()
             };
 
-            var json = JsonSerializer.Serialize(requestPayload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var validationResult = await _grpcClientService.ValidateApiKeyAsync(request);
 
-            var response = await _httpClient.PostAsync($"{_identityServiceUrl}/validate", content);
-
-            if (!response.IsSuccessStatusCode)
+            if (!validationResult.IsValid)
             {
-                _logger.LogWarning("🚫 Identity service error for path: {Path} - Status: {Status}", context.Request.Path, response.StatusCode);
+                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, validationResult.ErrorMessage);
                 context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("Authentication service unavailable");
-                return;
-            }
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-            var validationResult = JsonSerializer.Deserialize<ValidationResponse>(responseJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (validationResult == null || !validationResult.IsValid)
-            {
-                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, validationResult?.ErrorMessage ?? "Unknown error");
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync($"Invalid API key: {validationResult?.ErrorMessage ?? "Unknown error"}");
+                await context.Response.WriteAsync($"Invalid API key: {validationResult.ErrorMessage}");
                 return;
             }
 
             // Add user information to request headers for downstream services
             context.Request.Headers["X-User-Id"] = validationResult.UserId;
             context.Request.Headers["X-User-Name"] = validationResult.UserName;
-            context.Request.Headers["X-User-Permissions"] = string.Join(",", validationResult.Permissions ?? Array.Empty<string>());
+            context.Request.Headers["X-User-Permissions"] = string.Join(",", validationResult.Permissions);
 
             _logger.LogInformation("✅ API key validated for user: {UserName}, path: {Path}", validationResult.UserName, context.Request.Path);
 
@@ -119,18 +101,4 @@ public class ApiKeyValidationMiddleware
         return "Unknown";
     }
 
-    public void Dispose()
-    {
-        _httpClient?.Dispose();
-    }
-}
-
-public class ValidationResponse
-{
-    public bool IsValid { get; set; }
-    public string UserId { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public string[] Permissions { get; set; } = Array.Empty<string>();
-    public string ErrorMessage { get; set; } = string.Empty;
-    public DateTime ExpiresAt { get; set; }
 }

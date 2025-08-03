@@ -4,25 +4,61 @@ option csharp_namespace = "ERP.Contracts.Inventory";
 
 package inventory;
 
+import "google/protobuf/timestamp.proto";
+
 // Inventory Service for managing products and stock
 service InventoryService {
+  // Get hello message
+  rpc GetHello(HelloRequest) returns (HelloResponse);
+
+  // Get all products
+  rpc GetProducts(GetProductsRequest) returns (GetProductsResponse);
+
   // Get product by ID
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
-  
+
   // Check product availability
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
-  
+
   // Reserve stock for order
   rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
-  
+
   // Release reserved stock
   rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
-  
+
   // Update stock levels
   rpc UpdateStock(UpdateStockRequest) returns (UpdateStockResponse);
-  
+
   // Get low stock products
   rpc GetLowStockProducts(GetLowStockProductsRequest) returns (GetLowStockProductsResponse);
+
+  // Get inventory statistics
+  rpc GetInventoryStats(GetInventoryStatsRequest) returns (GetInventoryStatsResponse);
+
+  // Get health status
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+}
+
+// Common messages
+message HelloRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message HelloResponse {
+  string message = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 // Product messages
@@ -35,6 +71,9 @@ message Product {
   int32 minimum_stock = 6;
   double price = 7;
   ProductCategory category = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  bool is_active = 11;
 }
 
 enum ProductCategory {
@@ -47,8 +86,28 @@ enum ProductCategory {
 }
 
 // Request/Response messages
+message GetProductsRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+  ProductCategory category = 6;
+  bool low_stock_only = 7;
+}
+
+message GetProductsResponse {
+  repeated Product products = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
 message GetProductRequest {
-  int32 product_id = 1;
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 product_id = 4;
 }
 
 message GetProductResponse {
@@ -108,10 +167,27 @@ message UpdateStockResponse {
 }
 
 message GetLowStockProductsRequest {
-  // Empty for now
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
 }
 
 message GetLowStockProductsResponse {
   repeated Product products = 1;
   int32 total_count = 2;
+}
+
+message GetInventoryStatsRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message GetInventoryStatsResponse {
+  int32 total_products = 1;
+  int32 low_stock_products = 2;
+  int32 out_of_stock_products = 3;
+  double total_inventory_value = 4;
+  int32 active_products = 5;
+  google.protobuf.Timestamp generated_at = 6;
 }

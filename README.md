@@ -4,41 +4,100 @@ This project demonstrates a complete microservices architecture using .NET 8 wit
 
 ## Architecture Overview
 
+### 🏗️ **Complete gRPC Microservices Architecture with Centralized Authentication**
+
+> **🚀 NEW: All inter-service communication now uses gRPC for high performance and type safety!**
+
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client Apps   │───▶│  BFF Gateway    │───▶│  Microservices  │
-│                 │    │   (Port 5000)   │    │  (Ports 5001-6) │
-│  X-API-Key      │    │  🔐 Middleware  │    │  + User Context │
-│  (REQUIRED)     │    │  📡 REST Calls  │    │  + Permissions  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │ REST API Validation
-                              ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │ Identity Service│───▶│ Redis / Memory  │
-                       │   (Port 5007)   │    │  🔑 20+ Keys    │
-                       │  ✅ REST API    │    │  📊 Usage Stats │
-                       │  🔍 Validation  │    │  ⏰ Expiration  │
-                       └─────────────────┘    └─────────────────┘
+                    🌐 ERP PROTOTYPE ARCHITECTURE 🌐
 
-┌─────────────────┐    ┌─────────────────┐
-│   Developers    │───▶│ Scalar Docs     │
-│                 │    │   (Port 5002)   │
-│  📚 Browse APIs │    │  🔓 PUBLIC      │
-│  🧪 Test w/Keys │    │  📖 All APIs    │
-└─────────────────┘    └─────────────────┘
-                              │ When testing APIs
-                              ▼ (Requires X-API-Key)
-                       ┌─────────────────┐
-                       │  Gateway APIs   │
-                       │  🔐 Protected   │
-                       └─────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              🔓 PUBLIC ACCESS LAYER                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  📚 Scalar Documentation (Port 5002)                                           │
+│  ├─ 🔓 Browse APIs freely (no authentication)                                  │
+│  ├─ 📖 Aggregated OpenAPI specs from all services                              │
+│  ├─ 🧪 Test APIs with authentication (requires X-API-Key)                      │
+│  └─ 🎨 Modern purple theme with sidebar navigation                             │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ API Testing Requests
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           🚪 API GATEWAY LAYER (BFF)                           │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  🌐 BFF Gateway (Port 5000) - YARP Reverse Proxy                              │
+│  ├─ 🔐 API Key Validation Middleware (REQUIRED for business APIs)              │
+│  ├─ 🗺️ Service Discovery & Routing (JSON-based configuration)                  │
+│  ├─ 📡 CORS Support (for Scalar documentation)                                 │
+│  ├─ 🏷️ User Context Injection (X-User-Id, X-User-Name, X-User-Permissions)     │
+│  ├─ 📊 Request/Response Logging with service identification                     │
+│  └─ 🔓 Public endpoints: /health, /api/gateway/services, /swagger, /scalar     │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ Authentication Validation
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         🔐 IDENTITY & AUTHENTICATION LAYER                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  🔑 Identity Service (Port 5007)                                               │
+│  ├─ ✅ REST API for API key validation                                         │
+│  ├─ 🔧 API key generation and management                                       │
+│  ├─ 👥 User management with permissions                                        │
+│  ├─ 📊 Usage tracking and audit logging                                        │
+│  ├─ ⏰ API key expiration support                                              │
+│  └─ 🌱 Automatic seeding of test API keys                                      │
+│                                        │                                        │
+│  💾 Storage Layer                      ▼                                        │
+│  ├─ 🔴 Redis (Production)             📋 5 Predefined API Keys:                │
+│  ├─ 🧠 In-Memory (Fallback)           ├─ 🔐 Admin Master                       │
+│  ├─ 🔑 20+ API Keys                   ├─ 👨‍💻 Dev Team Lead                      │
+│  ├─ 📈 Usage Statistics               ├─ 🧪 QA Automation                      │
+│  └─ ⏰ Expiration Tracking            ├─ 📊 Monitoring Service                  │
+│                                       └─ 📈 Analytics Dashboard                │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ Authenticated Requests
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            🏢 BUSINESS MICROSERVICES LAYER                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  🌤️ Weather Service (5001)    📦 Order Service (5003)    📋 Inventory (5004)    │
+│  ├─ Weather forecasts         ├─ Order management        ├─ Product catalog     │
+│  ├─ Meteorological data       ├─ Order statistics        ├─ Stock levels        │
+│  └─ Health monitoring         └─ Order tracking          └─ Low stock alerts    │
+│                                                                                 │
+│  👥 Customer Service (5005)   💰 Finance Service (5006)   📚 Documentation (5002)│
+│  ├─ Customer management       ├─ Invoice management      ├─ API aggregation     │
+│  ├─ Customer statistics       ├─ Transaction tracking    ├─ OpenAPI specs       │
+│  └─ CRM functionality         └─ Financial reporting     └─ Scalar integration  │
+│                                                                                 │
+│  🔧 All Services Include:                                                      │
+│  ├─ 🏷️ User context from gateway headers                                       │
+│  ├─ 📊 Business logic and data processing                                      │
+│  ├─ 🔍 Health check endpoints                                                  │
+│  ├─ 📖 Individual Swagger documentation                                        │
+│  └─ 🌐 CORS support for cross-origin requests                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-🔐 COMPLETE AUTHENTICATION PIPELINE
-✅ BFF Gateway validates API keys via REST calls to Identity service
-✅ Identity service reads API keys from Redis (or in-memory fallback)
-✅ Scalar documentation is PUBLIC - browse APIs freely
-✅ API testing from Scalar requires authentication
-✅ User context injected into all authenticated requests
+🔄 AUTHENTICATION FLOW:
+1. 📱 Client/Scalar → 🚪 BFF Gateway → 🔐 Identity Service → 💾 Redis/Memory
+2. 🔍 API Key Lookup → ✅ Validation → 🏷️ User Context → 🏢 Business Service
+3. 📊 Response + Audit → 🧹 Header Cleanup → 📱 Client Response
+
+🛡️ SECURITY FEATURES:
+✅ All business APIs require X-API-Key header
+✅ Centralized authentication through Identity service
+✅ User context injection for audit trails
+✅ Public documentation access (no barriers for developers)
+✅ CORS configured for cross-origin API testing
+✅ Comprehensive request/response logging
+✅ API key expiration and usage tracking
+
+🚀 SCALABILITY FEATURES:
+✅ JSON-based service discovery (Kubernetes-ready)
+✅ Independent service scaling
+✅ Redis storage for production workloads
+✅ In-memory fallback for development
+✅ YARP reverse proxy for high performance
+✅ Microservices architecture with clear boundaries
 ```
 
 ## Services
@@ -174,11 +233,11 @@ The Identity service automatically creates test API keys on startup. Here are th
 
 | User Type | API Key | Permissions | Use Case |
 |-----------|---------|-------------|----------|
-| **🔐 Admin Master** | `WQt1fpWUsNMOq6DuUYfIcAQfvO2MprTiff5-4q0svJE` | read, write, delete, admin | Full system access, all operations |
-| **👨‍💻 Dev Team Lead** | `Yppw-SaC0oCVei6hKLRVAhdeWctJDa5fTWc9bIdZ-Do` | read, write, deploy | Development and deployment |
-| **🧪 QA Automation** | `kunurD6-ywinGUszH8Fc9xH57YpiKiHv7kvm9cUVgdU` | read, write, test | Testing and quality assurance |
-| **📊 Monitoring Service** | `kDGcGwSFRdolzTmkFnjt9jlcQybn69VVRc1LrKJgRow` | read, health | System monitoring and health checks |
-| **📈 Analytics Dashboard** | `r4ZKpmK9abTSk19T0Fw2O1XrBoGk0Hqx_tdizbUuhms` | read, analytics | Analytics and reporting dashboards |
+| **🔐 Admin Master** | `nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY` | read, write, delete, admin | Full system access, all operations |
+| **👨‍💻 Dev Team Lead** | `d1bPkKa9EFDVxxHcvYw5NhjzQ-vd-LT9MKz-mrkn_A4` | read, write, deploy | Development and deployment |
+| **🧪 QA Automation** | `BLDOZGF_9HAqKrKYGGGvauWWgMqZT2j-ugtfgvs-3Ac` | read, write, test | Testing and quality assurance |
+| **📊 Monitoring Service** | `hq_tzg6EUgtWBZQsFjMgKE4qTqPVTstqi0vBuUVTGyk` | read, health | System monitoring and health checks |
+| **📈 Analytics Dashboard** | `iOflCCPatJ0HGaaAMnUtAVBSViHkQcdcshUX8uvP4vs` | read, analytics | Analytics and reporting dashboards |
 
 **💡 Pro Tip**: The system automatically creates 15+ additional random API keys on startup for extended testing!
 
@@ -273,30 +332,30 @@ curl -X POST http://localhost:5007/api-keys \
    #### ✅ **Test With Valid API Keys (Should Succeed)**:
    ```bash
    # Using Admin Master API Key
-   curl -H "X-API-Key: 0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY" \
+   curl -H "X-API-Key: nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY" \
         http://localhost:5000/api/weather/hello
 
    # Using Dev Team Lead API Key
-   curl -H "X-API-Key: 38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M" \
+   curl -H "X-API-Key: d1bPkKa9EFDVxxHcvYw5NhjzQ-vd-LT9MKz-mrkn_A4" \
         http://localhost:5000/api/orders/hello
 
    # Using QA Automation API Key
-   curl -H "X-API-Key: 91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo" \
+   curl -H "X-API-Key: BLDOZGF_9HAqKrKYGGGvauWWgMqZT2j-ugtfgvs-3Ac" \
         http://localhost:5000/api/inventory/hello
 
    # Using Monitoring Service API Key
-   curl -H "X-API-Key: 8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk" \
+   curl -H "X-API-Key: hq_tzg6EUgtWBZQsFjMgKE4qTqPVTstqi0vBuUVTGyk" \
         http://localhost:5000/api/customers/hello
 
    # Using Analytics Dashboard API Key
-   curl -H "X-API-Key: h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA" \
+   curl -H "X-API-Key: iOflCCPatJ0HGaaAMnUtAVBSViHkQcdcshUX8uvP4vs" \
         http://localhost:5000/api/finance/hello
    ```
 
    #### 🔍 **Test All Services Through Gateway**:
    ```bash
    # Replace YOUR_API_KEY with any of the predefined keys above
-   export API_KEY="0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY"
+   export API_KEY="nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY"
 
    # Test all hello endpoints
    curl -H "X-API-Key: $API_KEY" http://localhost:5000/api/weather/hello
@@ -364,7 +423,7 @@ curl -X POST http://localhost:5007/api-keys \
    - Go to: http://localhost:5002/scalar/all
    - Click "Auth" button in Scalar
    - Select "ApiKey" authentication
-   - Enter API key: `0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY`
+   - Enter API key: `nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY`
    - Test endpoints (they will go through the gateway with authentication)
 
    **Option 3 - Access Through Gateway (Requires API Key)**:
@@ -655,11 +714,11 @@ This infrastructure is designed to support a full ERP system with:
 
 ### **Ready-to-Use API Keys**
 ```
-Admin Master:     WQt1fpWUsNMOq6DuUYfIcAQfvO2MprTiff5-4q0svJE
-Dev Team Lead:    Yppw-SaC0oCVei6hKLRVAhdeWctJDa5fTWc9bIdZ-Do
-QA Automation:    kunurD6-ywinGUszH8Fc9xH57YpiKiHv7kvm9cUVgdU
-Monitoring:       kDGcGwSFRdolzTmkFnjt9jlcQybn69VVRc1LrKJgRow
-Analytics:        r4ZKpmK9abTSk19T0Fw2O1XrBoGk0Hqx_tdizbUuhms
+Admin Master:     nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY
+Dev Team Lead:    d1bPkKa9EFDVxxHcvYw5NhjzQ-vd-LT9MKz-mrkn_A4
+QA Automation:    BLDOZGF_9HAqKrKYGGGvauWWgMqZT2j-ugtfgvs-3Ac
+Monitoring:       hq_tzg6EUgtWBZQsFjMgKE4qTqPVTstqi0vBuUVTGyk
+Analytics:        iOflCCPatJ0HGaaAMnUtAVBSViHkQcdcshUX8uvP4vs
 ```
 
 ### **Essential URLs**
@@ -673,7 +732,7 @@ Helper Page:      scalar-with-api-key.html
 ### **Quick Test Commands**
 ```bash
 # Test with API key (replace with any key above)
-curl -H "X-API-Key: WQt1fpWUsNMOq6DuUYfIcAQfvO2MprTiff5-4q0svJE" \
+curl -H "X-API-Key: nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY" \
      http://localhost:5000/api/orders/hello
 
 # Run automated tests

@@ -4,32 +4,78 @@ option csharp_namespace = "ERP.Contracts.Orders";
 
 package orders;
 
+import "google/protobuf/timestamp.proto";
+
 // Order Service for managing orders
 service OrderService {
+  // Get hello message
+  rpc GetHello(HelloRequest) returns (HelloResponse);
+
+  // Get all orders
+  rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse);
+
   // Get order by ID
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
-  
+
   // Get orders by customer
   rpc GetOrdersByCustomer(GetOrdersByCustomerRequest) returns (GetOrdersByCustomerResponse);
-  
+
   // Create new order
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
-  
+
   // Update order status
   rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
-  
+
   // Get order statistics
   rpc GetOrderStats(GetOrderStatsRequest) returns (GetOrderStatsResponse);
+
+  // Get health status
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+}
+
+// Common messages
+message HelloRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message HelloResponse {
+  string message = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 // Order messages
 message Order {
   int32 id = 1;
   int32 customer_id = 2;
-  int64 order_date = 3;
+  google.protobuf.Timestamp order_date = 3;
   OrderStatus status = 4;
   double total_amount = 5;
   string description = 6;
+  string customer_name = 7;
+  repeated OrderItem items = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message OrderItem {
+  int32 id = 1;
+  int32 product_id = 2;
+  string product_name = 3;
+  int32 quantity = 4;
+  double unit_price = 5;
+  double total_price = 6;
 }
 
 enum OrderStatus {
@@ -41,8 +87,27 @@ enum OrderStatus {
 }
 
 // Request/Response messages
+message GetOrdersRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+  string status = 6; // Filter by status
+}
+
+message GetOrdersResponse {
+  repeated Order orders = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
 message GetOrderRequest {
-  int32 order_id = 1;
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 order_id = 4;
 }
 
 message GetOrderResponse {
@@ -52,7 +117,10 @@ message GetOrderResponse {
 }
 
 message GetOrdersByCustomerRequest {
-  int32 customer_id = 1;
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 customer_id = 4;
 }
 
 message GetOrdersByCustomerResponse {
@@ -61,9 +129,13 @@ message GetOrdersByCustomerResponse {
 }
 
 message CreateOrderRequest {
-  int32 customer_id = 1;
-  double total_amount = 2;
-  string description = 3;
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 customer_id = 4;
+  double total_amount = 5;
+  string description = 6;
+  repeated OrderItem items = 7;
 }
 
 message CreateOrderResponse {
@@ -73,8 +145,11 @@ message CreateOrderResponse {
 }
 
 message UpdateOrderStatusRequest {
-  int32 order_id = 1;
-  OrderStatus status = 2;
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 order_id = 4;
+  OrderStatus status = 5;
 }
 
 message UpdateOrderStatusResponse {
@@ -84,7 +159,11 @@ message UpdateOrderStatusResponse {
 }
 
 message GetOrderStatsRequest {
-  // Empty for now, could add date filters later
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  google.protobuf.Timestamp from_date = 4;
+  google.protobuf.Timestamp to_date = 5;
 }
 
 message GetOrderStatsResponse {
@@ -95,4 +174,5 @@ message GetOrderStatsResponse {
   int32 delivered_orders = 5;
   double total_revenue = 6;
   double average_order_value = 7;
+  google.protobuf.Timestamp generated_at = 8;
 }

@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+option csharp_namespace = "ERP.Contracts.Customer";
+
+package customer;
+
+import "google/protobuf/timestamp.proto";
+
+// Customer Service for customer relationship management
+service CustomerService {
+  // Get hello message
+  rpc GetHello(HelloRequest) returns (HelloResponse);
+  
+  // Get all customers
+  rpc GetCustomers(GetCustomersRequest) returns (GetCustomersResponse);
+  
+  // Get customer by ID
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  
+  // Get customer statistics
+  rpc GetCustomerStats(GetCustomerStatsRequest) returns (GetCustomerStatsResponse);
+  
+  // Get health status
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+}
+
+// Common messages
+message HelloRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message HelloResponse {
+  string message = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+// Customer-specific messages
+message GetCustomersRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message GetCustomersResponse {
+  repeated Customer customers = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetCustomerRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 customer_id = 4;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+  bool found = 2;
+}
+
+message GetCustomerStatsRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+}
+
+message GetCustomerStatsResponse {
+  int32 total_customers = 1;
+  int32 active_customers = 2;
+  int32 new_customers_this_month = 3;
+  double average_order_value = 4;
+  google.protobuf.Timestamp generated_at = 5;
+}
+
+message Customer {
+  int32 id = 1;
+  string name = 2;
+  string email = 3;
+  string phone = 4;
+  string company = 5;
+  string address = 6;
+  string city = 7;
+  string country = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp last_order_date = 10;
+  double total_spent = 11;
+  int32 order_count = 12;
+  bool is_active = 13;
+}

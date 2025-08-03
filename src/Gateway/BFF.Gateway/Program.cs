@@ -8,9 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Load service mappings from JSON file
 builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
 
-// Add YARP services
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+// Add controllers for REST API endpoints
+builder.Services.AddControllers();
 
 // Add logging
 builder.Services.AddLogging();
@@ -29,6 +28,9 @@ builder.Services.AddCors(options =>
 
 // Add service mapping service
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
+
+// Add gRPC client service for microservice communication
+builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
 
 var app = builder.Build();
 
@@ -98,7 +100,7 @@ app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", T
 .WithName("GatewayHealthCheck")
 .WithTags("Health");
 
-// Configure YARP
-app.MapReverseProxy();
+// Map controllers
+app.MapControllers();
 
 app.Run();

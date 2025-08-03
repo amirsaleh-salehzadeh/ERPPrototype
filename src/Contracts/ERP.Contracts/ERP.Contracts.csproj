@@ -19,6 +19,9 @@
     <Protobuf Include="Protos\identity.proto" GrpcServices="Both" />
     <Protobuf Include="Protos\orders.proto" GrpcServices="Both" />
     <Protobuf Include="Protos\inventory.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos\weather.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos\customer.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos\finance.proto" GrpcServices="Both" />
   </ItemGroup>
 
 </Project>
