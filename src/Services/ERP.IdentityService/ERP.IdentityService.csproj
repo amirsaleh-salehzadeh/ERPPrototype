@@ -17,4 +17,6 @@
     <ProjectReference Include="..\..\Contracts\ERP.Contracts\ERP.Contracts.csproj" />
   </ItemGroup>
 
+
+
 </Project>

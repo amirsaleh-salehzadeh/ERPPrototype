@@ -5,13 +5,13 @@ Write-Host "ERP Prototype API Key Testing Script" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Predefined API keys
+# Predefined API keys (updated with latest generated keys)
 $apiKeys = @{
-    "Admin Master" = "0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY"
-    "Dev Team Lead" = "38c_y0McElpnr4iLNVLsR0VjGQuzRlGP-zeCmVIhI6M"
-    "QA Automation" = "91sd4TPkE2fNyxh7xhSBIJt11JciT8bWHQ9aTGQhiAo"
-    "Monitoring Service" = "8Swc7979DTVqEYebKAdpf3xmiUpE9mcOGsy1emvaoNk"
-    "Analytics Dashboard" = "h02zaXOJKTcdmuytRruPhEf8JutxDuhCpmKkVWgheuA"
+    "Admin Master" = "WQt1fpWUsNMOq6DuUYfIcAQfvO2MprTiff5-4q0svJE"
+    "Dev Team Lead" = "Yppw-SaC0oCVei6hKLRVAhdeWctJDa5fTWc9bIdZ-Do"
+    "QA Automation" = "kunurD6-ywinGUszH8Fc9xH57YpiKiHv7kvm9cUVgdU"
+    "Monitoring Service" = "kDGcGwSFRdolzTmkFnjt9jlcQybn69VVRc1LrKJgRow"
+    "Analytics Dashboard" = "r4ZKpmK9abTSk19T0Fw2O1XrBoGk0Hqx_tdizbUuhms"
 }
 
 # Test endpoints

@@ -16,7 +16,7 @@ public class ApiKeyValidationMiddleware
         _logger = logger;
         _httpClient = new HttpClient();
 
-        // Use REST API for Identity service (simplified for demo)
+        // Use REST API for Identity service communication
         _identityServiceUrl = configuration.GetValue<string>("IdentityService:RestUrl") ?? "http://localhost:5007";
     }
 
@@ -96,8 +96,12 @@ public class ApiKeyValidationMiddleware
         var skipPaths = new[]
         {
             "/health",
-            "/api/gateway/services"
-            // Removed /swagger and /scalar - they should be protected too
+            "/api/gateway/services",
+            "/swagger",
+            "/scalar",
+            "/api/docs/scalar"  // Allow Scalar documentation through gateway
+            // Documentation endpoints are public - users can view APIs freely
+            // But actual API requests from Scalar will require authentication
         };
 
         return skipPaths.Any(skipPath => path.StartsWith(skipPath, StringComparison.OrdinalIgnoreCase));
@@ -121,7 +125,6 @@ public class ApiKeyValidationMiddleware
     }
 }
 
-// Response model for validation
 public class ValidationResponse
 {
     public bool IsValid { get; set; }

@@ -15,10 +15,25 @@ builder.Services.AddReverseProxy()
 // Add logging
 builder.Services.AddLogging();
 
+// Add CORS for Documentation service
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowDocumentation", policy =>
+    {
+        policy.WithOrigins("http://localhost:5002", "http://localhost:5000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // Add service mapping service
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 
 var app = builder.Build();
+
+// Enable CORS
+app.UseCors("AllowDocumentation");
 
 // Add API key validation middleware
 app.UseMiddleware<ApiKeyValidationMiddleware>();

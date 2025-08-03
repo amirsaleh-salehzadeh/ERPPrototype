@@ -77,11 +77,11 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient, 
         {
             title = "ERP Prototype - All Services API",
             version = "v1",
-            description = "Aggregated API documentation for all ERP microservices. All endpoints require API key authentication."
+            description = "Aggregated API documentation for all ERP microservices. All endpoints require API key authentication and must be accessed through the API Gateway."
         },
         servers = new[]
         {
-            new { url = "http://localhost:5000", description = "API Gateway (Requires API Key)" }
+            new { url = "http://localhost:5000", description = "API Gateway (Required - All requests must go through gateway)" }
         },
         paths = new Dictionary<string, object>(),
         components = new
@@ -94,7 +94,7 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient, 
                     type = "apiKey",
                     @in = "header",
                     name = "X-API-Key",
-                    description = "API Key for authentication. Use one of the predefined keys: Admin Master, Dev Team Lead, QA Automation, Monitoring Service, or Analytics Dashboard."
+                    description = "API Key for authentication. Required for all requests. Use one of these predefined keys:\n\n• **Admin Master**: VZpK8xuuCPovwHJJhmnlWMrd6f9s_t79-x6iVg2-CiY\n• **Dev Team Lead**: tQcpvaSMM2WJOqaSG952nZEtSoVEER7xKsHhyMXgYd8\n• **QA Automation**: FsCslfwFJ4nGui7x2ExACxe3wQoCN9tGjoHto1JgyJs\n• **Monitoring Service**: lmdKcBWZ3RWvegwPD-pMy_htryWPnoWR4gSwx8zl7_U\n• **Analytics Dashboard**: jZvSH3raXf6bufYVXPNEEX7AHQdXPNwy7IFIHwl5hzM"
                 }
             }
         },

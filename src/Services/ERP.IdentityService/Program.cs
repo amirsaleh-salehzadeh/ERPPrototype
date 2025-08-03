@@ -45,6 +45,9 @@ builder.Services.AddGrpc();
 
 // Add Identity services - Use Hybrid service that works with or without Redis
 builder.Services.AddSingleton<IApiKeyService, HybridApiKeyService>();
+
+// Add gRPC service implementation (disabled for now)
+// builder.Services.AddScoped<IdentityGrpcService>();
 builder.Services.AddSingleton<ApiKeySeederService>();
 
 var app = builder.Build();
@@ -77,7 +80,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Configure gRPC endpoint (temporarily disabled for demo)
+// Configure gRPC endpoint (disabled for now - using REST API)
 // app.MapGrpcService<IdentityGrpcService>();
 
 // Hello World endpoint

@@ -42,6 +42,17 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddLogging();
 
+// Add CORS for Documentation service
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowDocumentation", policy =>
+    {
+        policy.WithOrigins("http://localhost:5002", "http://localhost:5000")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -52,6 +63,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Enable CORS
+app.UseCors("AllowDocumentation");
 
 // Middleware to log incoming requests
 app.Use(async (context, next) =>
