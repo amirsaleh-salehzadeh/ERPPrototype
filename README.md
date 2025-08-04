@@ -1,12 +1,14 @@
-# ERP Prototype - Microservices Architecture with API Key Authentication
+# ERP Prototype - Enterprise Microservices with Advanced Security Pipeline & Elasticsearch Logging
 
-This project demonstrates a complete microservices architecture using .NET 8 with YARP (Yet Another Reverse Proxy) as a Backend for Frontend (BFF) gateway, featuring centralized API key authentication and authorization through a dedicated Identity service.
+This project demonstrates a **production-ready microservices architecture** using .NET 8 with YARP as a Backend for Frontend (BFF) gateway, featuring a **comprehensive 4-stage security pipeline**, **centralized authentication**, and **enterprise-grade Elasticsearch logging** for complete observability.
 
 ## Architecture Overview
 
-### 🏗️ **Complete gRPC Microservices Architecture with Centralized Authentication**
+### 🏗️ **Enterprise Microservices with 4-Stage Security Pipeline & Elasticsearch Logging**
 
-> **🚀 NEW: All inter-service communication now uses gRPC for high performance and type safety!**
+> **🔐 NEW: Advanced 4-stage security pipeline with comprehensive Elasticsearch logging!**
+> **📊 NEW: Complete observability with Kibana dashboards and structured logging!**
+> **🚀 NEW: All inter-service communication uses gRPC for high performance and type safety!**
 
 ```
                     🌐 ERP PROTOTYPE ARCHITECTURE 🌐
@@ -23,14 +25,17 @@ This project demonstrates a complete microservices architecture using .NET 8 wit
                                         │
                                         ▼ API Testing Requests
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           🚪 API GATEWAY LAYER (BFF)                           │
+│                    🚪 API GATEWAY LAYER (BFF) - SECURITY PIPELINE              │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  🌐 BFF Gateway (Port 5000) - YARP Reverse Proxy                              │
-│  ├─ 🔐 API Key Validation Middleware (REQUIRED for business APIs)              │
+│  🌐 BFF Gateway (Port 5000) - YARP Reverse Proxy with 4-Stage Security        │
+│  ├─ 🔑 Stage 1: API Key Validation (validates key existence & authenticity)    │
+│  ├─ 🎯 Stage 2: API Access Level Check (verifies endpoint access permissions)  │
+│  ├─ 👤 Stage 3: User Authentication (JWT/Session token validation)             │
+│  ├─ 🛡️ Stage 4: User Authorization (role/permission verification)              │
+│  ├─ 📊 Comprehensive Elasticsearch Logging (all requests/responses/security)   │
 │  ├─ 🗺️ Service Discovery & Routing (JSON-based configuration)                  │
 │  ├─ 📡 CORS Support (for Scalar documentation)                                 │
-│  ├─ 🏷️ User Context Injection (X-User-Id, X-User-Name, X-User-Permissions)     │
-│  ├─ 📊 Request/Response Logging with service identification                     │
+│  ├─ 🏷️ Security Context Injection (API key info, user context, permissions)   │
 │  └─ 🔓 Public endpoints: /health, /api/gateway/services, /swagger, /scalar     │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                         │
@@ -82,14 +87,28 @@ This project demonstrates a complete microservices architecture using .NET 8 wit
 2. 🔍 API Key Lookup → ✅ Validation → 🏷️ User Context → 🏢 Business Service
 3. 📊 Response + Audit → 🧹 Header Cleanup → 📱 Client Response
 
-🛡️ SECURITY FEATURES:
-✅ All business APIs require X-API-Key header
+🛡️ ADVANCED SECURITY FEATURES:
+✅ 4-Stage Security Pipeline (API Key → API Access → User Auth → User Authorization)
+✅ Comprehensive security decision logging with timing analysis
+✅ API access level verification (ReadOnly, Standard, Premium, Admin)
+✅ Multi-token user authentication (JWT, Session, Custom headers)
+✅ Role-based authorization with fine-grained permissions
+✅ Security context propagation to downstream services
 ✅ Centralized authentication through Identity service
-✅ User context injection for audit trails
+✅ User context injection for complete audit trails
 ✅ Public documentation access (no barriers for developers)
 ✅ CORS configured for cross-origin API testing
-✅ Comprehensive request/response logging
 ✅ API key expiration and usage tracking
+
+📊 ELASTICSEARCH LOGGING & OBSERVABILITY:
+✅ Complete request/response logging to Elasticsearch
+✅ Structured logging with correlation IDs and distributed tracing
+✅ Security pipeline decision tracking with performance metrics
+✅ Kibana dashboards for real-time monitoring and analytics
+✅ Searchable logs with user context, service mapping, and error analysis
+✅ Daily index rotation with configurable retention policies
+✅ Development and production logging configurations
+✅ Real-time log streaming with batched Elasticsearch writes
 
 🚀 SCALABILITY FEATURES:
 ✅ JSON-based service discovery (Kubernetes-ready)
@@ -181,6 +200,243 @@ This project demonstrates a complete microservices architecture using .NET 8 wit
   - Aggregates OpenAPI specs from all services
   - Purple theme with sidebar navigation
   - Shows all microservice endpoints in one interface
+
+## 🔐 Advanced 4-Stage Security Pipeline
+
+The BFF Gateway implements a **production-ready security pipeline** that processes every request through four sequential validation stages. This ensures comprehensive security while maintaining high performance and detailed audit trails.
+
+### 🔄 **Security Pipeline Flow (Order is Critical)**
+
+```
+1. 🔑 API Key Validation          ← Validates API key exists and is authentic
+   ↓ (SecurityContext initialized)
+2. 🎯 API Access Level Verification ← Checks if API key has access to specific endpoint
+   ↓ (API permissions verified)
+3. 👤 User Authentication          ← Validates user tokens (JWT, Session, Custom)
+   ↓ (User identity established)
+4. 🛡️ User Authorization           ← Verifies user permissions for the endpoint
+   ↓ (Complete security context)
+5. ✅ Request Processing           ← Forwards to microservice with security headers
+```
+
+### 🔧 **Stage Details**
+
+#### **Stage 1: API Key Validation** 🔑
+- **Purpose**: Validates API key existence and authenticity
+- **Process**: Calls Identity service via gRPC for key validation
+- **Success**: Initializes SecurityContext with API key information
+- **Failure**: Returns 401 Unauthorized with "API key is required" or "Invalid API key"
+- **Logging**: Records validation attempt, timing, and masked API key
+
+#### **Stage 2: API Access Level Verification** 🎯
+- **Purpose**: Verifies API key has permission to access specific service/endpoint
+- **Access Levels**: None, ReadOnly, Limited, Standard, Premium, Admin
+- **Process**: Checks API key access level against endpoint requirements
+- **Success**: Updates SecurityContext with access level information
+- **Failure**: Returns 403 Forbidden with "API access denied" and required level
+- **Logging**: Records access level check, required vs current level
+
+#### **Stage 3: User Authentication** 👤
+- **Purpose**: Authenticates user via tokens (JWT, Session, Custom headers)
+- **Token Sources**: Authorization header (Bearer), X-User-Token header, Session cookies
+- **Process**: Validates token with Identity service and extracts user information
+- **Success**: Populates SecurityContext with user details (ID, name, roles, permissions)
+- **Failure**: Returns 401 Unauthorized with "User authentication failed"
+- **Configurable**: Some endpoints may skip user authentication (API-key-only access)
+- **Logging**: Records authentication attempt, token type, user information
+
+#### **Stage 4: User Authorization** 🛡️
+- **Purpose**: Verifies user has required roles/permissions for specific endpoint
+- **Authorization Levels**: None, Guest, User, PowerUser, Manager, Admin, SuperAdmin
+- **Process**: Checks user roles and permissions against endpoint requirements
+- **Success**: Adds complete security context headers for downstream services
+- **Failure**: Returns 403 Forbidden with "Access denied" and required permissions
+- **Logging**: Records authorization decision, required vs current permissions, complete pipeline timing
+
+### 📊 **Security Context & Headers**
+
+After successful pipeline completion, the following headers are added to downstream requests:
+
+```http
+X-API-Key-Id: abc123
+X-API-Client-Name: DevTeamLead
+X-API-Access-Level: Standard
+X-User-Id: user123
+X-User-Name: john.doe
+X-User-Email: john.doe@company.com
+X-User-Roles: developer,team-lead
+X-User-Permissions: read,write,deploy
+X-User-Access-Level: PowerUser
+X-Security-Context: Verified
+X-Security-Pipeline: Complete
+```
+
+### ⚡ **Performance & Monitoring**
+
+- **Pipeline Timing**: Each stage records execution time for performance analysis
+- **Security Decisions**: All decisions logged with reasoning and context
+- **Correlation IDs**: RequestId, TraceId, SpanId for distributed tracing
+- **Error Handling**: Comprehensive error logging with stack traces
+- **Graceful Degradation**: Handles Identity service unavailability
+- **Configurable Endpoints**: Different security requirements per endpoint
+
+## 📊 Elasticsearch Logging & Observability
+
+The BFF Gateway includes **enterprise-grade logging** with Elasticsearch integration, providing complete observability into all requests, security decisions, and system performance.
+
+### 🎯 **What Gets Logged**
+
+#### **Request/Response Data**
+- **Request Details**: Method, path, headers, query parameters, body (up to 10KB)
+- **Response Details**: Status code, headers, body, content type and length
+- **Timing Information**: Request duration, security pipeline timing breakdown
+- **Network Context**: Client IP, User-Agent, connection details
+
+#### **Security Pipeline Logging**
+- **API Key Validation**: Key validation attempts, success/failure, masked keys
+- **API Access Checks**: Access level verification, required vs current levels
+- **User Authentication**: Token validation, user information, authentication methods
+- **User Authorization**: Permission checks, role verification, authorization decisions
+- **Security Context**: Complete security pipeline summary with stage timings
+
+#### **Service & Routing Information**
+- **Service Mapping**: Target service identification, routing decisions
+- **User Context**: User ID, name, roles, permissions from security pipeline
+- **Correlation Data**: RequestId, TraceId, SpanId for distributed tracing
+- **Error Analysis**: Detailed error logging with stack traces and context
+
+### 🔧 **Elasticsearch Configuration**
+
+#### **Index Structure**
+- **Production**: `erp-bff-gateway-logs-{yyyy.MM.dd}` (daily rotation)
+- **Development**: `erp-bff-gateway-dev-logs-{yyyy.MM.dd}` (daily rotation)
+- **Auto-template**: Automatic index template creation with proper field mappings
+- **Retention**: Configurable retention policies for log management
+
+#### **Logging Levels & Batching**
+- **Production**: Information level with 50-record batches for efficiency
+- **Development**: Debug level with 10-record batches for faster feedback
+- **Multiple Outputs**: Console, File, and Elasticsearch simultaneously
+- **Graceful Fallback**: Continues logging to console/file if Elasticsearch unavailable
+
+### 🎨 **Kibana Dashboards & Visualization**
+
+#### **Quick Setup**
+```bash
+# Start Elasticsearch and Kibana
+docker network create erp-network
+docker-compose -f docker-compose.elasticsearch.yml up -d
+
+# Access Kibana
+http://localhost:5601
+```
+
+#### **Pre-configured Dashboards**
+
+**🔍 Request Monitoring Dashboard**
+- Request volume over time by service and method
+- Response time percentiles and averages
+- Error rate tracking with status code breakdown
+- Geographic request distribution (if available)
+
+**🔐 Security Analytics Dashboard**
+- Security pipeline success/failure rates
+- API key usage patterns and top clients
+- Authentication failure analysis
+- User activity and permission usage
+
+**⚡ Performance Dashboard**
+- Request duration histograms by service
+- Security pipeline timing breakdown
+- Slowest endpoints and bottleneck identification
+- Service health and availability metrics
+
+**🚨 Error Analysis Dashboard**
+- Error rate trends and spike detection
+- Top error messages and stack traces
+- Failed authentication attempts and patterns
+- Service-specific error analysis
+
+#### **Useful Kibana Queries**
+
+```javascript
+// All failed requests
+ResponseDetails.StatusCode:>=400
+
+// Slow requests (>1000ms)
+Duration:>1000
+
+// Security failures
+SecurityDecision.IsAllowed:false
+
+// Requests by specific user
+RequestDetails.UserName:"john.doe"
+
+// API key usage by client
+RequestDetails.ApiKey:"admin-***"
+
+// Service-specific requests
+RequestDetails.ServiceName:"WeatherService"
+```
+
+### 📈 **Log Analysis Examples**
+
+#### **Security Pipeline Success**
+```json
+{
+  "SecurityPipelineStages": "ApiKeyValidation(45.2ms) → ApiAccessCheck(12.1ms) → UserAuth(89.3ms) → UserAuthorization(23.7ms)",
+  "TotalSecurityDuration": 170.3,
+  "Success": true,
+  "UserName": "john.doe",
+  "ApiKeyId": "dev-team-lead-key"
+}
+```
+
+#### **Request/Response Logging**
+```json
+{
+  "RequestDetails": {
+    "Method": "GET",
+    "Path": "/api/orders/stats",
+    "ServiceName": "OrderService",
+    "UserName": "john.doe",
+    "ApiKey": "d1bPkKa9***"
+  },
+  "ResponseDetails": {
+    "StatusCode": 200,
+    "ContentLength": 1247
+  },
+  "Duration": 234,
+  "Success": true
+}
+```
+
+### 🛠️ **Setup & Configuration**
+
+#### **Start Elasticsearch & Kibana**
+```bash
+# Create network
+docker network create erp-network
+
+# Start ELK stack
+docker-compose -f docker-compose.elasticsearch.yml up -d
+
+# Verify services
+curl http://localhost:9200/_cluster/health
+curl http://localhost:5601/api/status
+```
+
+#### **Create Kibana Index Pattern**
+1. Open Kibana: http://localhost:5601
+2. Go to **Stack Management** → **Index Patterns**
+3. Create pattern: `erp-bff-gateway-*`
+4. Select time field: `@timestamp`
+5. Start exploring logs in **Discover**
+
+#### **Environment Configuration**
+- **Development**: Debug logging, faster batching, single shard
+- **Production**: Information logging, efficient batching, multiple shards/replicas
+- **Fallback**: Automatic fallback to console/file logging if Elasticsearch unavailable
 
 ## 🔑 API Key Authentication
 
@@ -277,7 +533,8 @@ curl -X POST http://localhost:5007/api-keys \
 ### Prerequisites
 - .NET 8 SDK
 - Redis (optional - will use in-memory storage if not available)
-- Docker (optional)
+- Docker (recommended for Elasticsearch/Kibana)
+- Docker Compose (for ELK stack)
 
 ### Running Locally
 
@@ -288,7 +545,23 @@ curl -X POST http://localhost:5007/api-keys \
    dotnet build
    ```
 
-2. **Start the services** (in separate terminals):
+2. **Start Elasticsearch and Kibana (Optional but Recommended)**:
+   ```bash
+   # Create Docker network
+   docker network create erp-network
+
+   # Start Elasticsearch and Kibana
+   docker-compose -f docker-compose.elasticsearch.yml up -d
+
+   # Verify services are running
+   curl http://localhost:9200/_cluster/health
+   curl http://localhost:5601/api/status
+
+   # Access Kibana dashboard
+   # http://localhost:5601
+   ```
+
+3. **Start the services** (in separate terminals):
    ```bash
    # Terminal 1 - Identity Service (REQUIRED - Start this first!)
    dotnet run --project src\Services\ERP.IdentityService\ERP.IdentityService.csproj
@@ -320,7 +593,19 @@ curl -X POST http://localhost:5007/api-keys \
    - Start the **BFF Gateway LAST** as it needs to connect to all other services
    - All services will show comprehensive logs with emojis for easy monitoring
 
-3. **Test the API Key Authentication Pipeline**:
+4. **Set up Kibana for log analysis (if Elasticsearch is running)**:
+   ```bash
+   # Open Kibana in browser
+   http://localhost:5601
+
+   # Create index pattern
+   # 1. Go to Stack Management → Index Patterns
+   # 2. Create pattern: erp-bff-gateway-*
+   # 3. Select time field: @timestamp
+   # 4. Go to Discover to view logs
+   ```
+
+5. **Test the Advanced Security Pipeline**:
 
    #### 🚫 **Test Without API Key (Should Fail)**:
    ```bash
@@ -701,14 +986,32 @@ This infrastructure is designed to support a full ERP system with:
 
 ## 🛠️ Technology Stack
 
-- **.NET 8**: Latest LTS version with Minimal APIs
-- **YARP**: Microsoft's reverse proxy for API Gateway
-- **Redis**: In-memory data store for API keys (with fallback)
-- **StackExchange.Redis**: Redis client for .NET
+### **Core Framework**
+- **.NET 8**: Latest LTS version with Minimal APIs and gRPC support
+- **YARP**: Microsoft's reverse proxy for high-performance API Gateway
+- **gRPC**: Type-safe inter-service communication with Protocol Buffers
+
+### **Security & Authentication**
+- **4-Stage Security Pipeline**: API Key → API Access → User Auth → User Authorization
+- **JWT/Session Authentication**: Multi-token user authentication support
+- **Role-Based Access Control**: Fine-grained permissions and authorization
+
+### **Data Storage**
+- **Redis**: In-memory data store for API keys and session data (with fallback)
+- **StackExchange.Redis**: High-performance Redis client for .NET
+- **In-Memory Storage**: Development fallback for Redis unavailability
+
+### **Logging & Observability**
+- **Serilog**: Structured logging with multiple sinks (Console, File, Elasticsearch)
+- **Elasticsearch**: Enterprise search and analytics for log storage
+- **Kibana**: Data visualization and dashboard platform for log analysis
+- **Distributed Tracing**: Request correlation with TraceId and SpanId
+
+### **Documentation & Development**
 - **Scalar**: Modern API documentation (preferred over Swagger)
-- **Docker**: Containerization support
-- **JSON Configuration**: Service mapping and configuration
-- **Structured Logging**: Comprehensive request/response logging
+- **Docker & Docker Compose**: Containerization and orchestration support
+- **JSON Configuration**: Service mapping and configuration management
+- **OpenAPI/Swagger**: API specification and documentation generation
 
 ## 📋 Quick Reference
 
@@ -726,6 +1029,8 @@ Analytics:        iOflCCPatJ0HGaaAMnUtAVBSViHkQcdcshUX8uvP4vs
 Gateway:          http://localhost:5000
 Identity Service: http://localhost:5007
 Scalar Docs:      http://localhost:5002/scalar/all
+Elasticsearch:    http://localhost:9200
+Kibana:           http://localhost:5601
 Helper Page:      scalar-with-api-key.html
 ```
 
@@ -734,6 +1039,16 @@ Helper Page:      scalar-with-api-key.html
 # Test with API key (replace with any key above)
 curl -H "X-API-Key: nFiAoLX2tk1OXi_Xa4xjwr9b7C8ovqp4mAMsymP9fDY" \
      http://localhost:5000/api/orders/hello
+
+# Start Elasticsearch and Kibana
+docker network create erp-network
+docker-compose -f docker-compose.elasticsearch.yml up -d
+
+# Check Elasticsearch health
+curl http://localhost:9200/_cluster/health
+
+# View logs in Kibana
+# http://localhost:5601 → Stack Management → Index Patterns → erp-bff-gateway-*
 
 # Run automated tests
 .\test-api-keys.ps1
@@ -807,20 +1122,37 @@ curl -H "X-API-Key: 0MyvBtNvMQMrfJHZjORFVxjHcUUYEpv5HrOhJBRrhOY" \
 curl -X POST http://localhost:5007/seed/random/5
 ```
 
-## 🎉 Project Status: PRODUCTION READY
+## 🎉 Project Status: ENTERPRISE PRODUCTION READY
 
-This ERP Prototype demonstrates a **complete enterprise microservices architecture** with:
+This ERP Prototype demonstrates a **complete enterprise microservices architecture** with advanced security and observability:
 
 ### **✅ Implemented Features**
-- **🔐 Smart Authentication**: API key validation for business endpoints
-- **📚 Open Documentation**: Freely accessible API documentation
-- **🚪 API Gateway**: YARP-based routing with middleware pipeline
-- **🏗️ Microservices**: 7 independent services with business logic
-- **🔍 Service Discovery**: JSON-based configuration for Kubernetes
-- **📊 Monitoring**: Comprehensive logging and usage tracking
-- **🧪 Testing Tools**: Automated scripts and helper utilities
-- **💾 Data Storage**: Redis integration with in-memory fallback
-- **🎯 User Context**: Services receive authenticated user information
+
+#### **🔐 Advanced Security Pipeline**
+- **4-Stage Security Validation**: API Key → API Access → User Auth → User Authorization
+- **Multi-Token Authentication**: JWT, Session cookies, Custom headers support
+- **Role-Based Access Control**: Fine-grained permissions and user authorization
+- **Security Context Propagation**: Complete security headers for downstream services
+- **Comprehensive Security Logging**: All security decisions tracked with timing
+
+#### **📊 Enterprise Observability**
+- **Elasticsearch Integration**: Complete request/response logging with structured data
+- **Kibana Dashboards**: Real-time monitoring, analytics, and log visualization
+- **Distributed Tracing**: Request correlation with TraceId/SpanId across services
+- **Performance Monitoring**: Security pipeline timing, request duration analysis
+- **Error Analysis**: Detailed error tracking with stack traces and context
+
+#### **🏗️ Microservices Architecture**
+- **7 Independent Services**: Weather, Orders, Inventory, Customers, Finance, Docs, Identity
+- **gRPC Inter-Service Communication**: Type-safe, high-performance service calls
+- **Service Discovery**: JSON-based configuration for Kubernetes scaling
+- **API Gateway**: YARP-based routing with comprehensive middleware pipeline
+
+#### **🛠️ Developer Experience**
+- **Scalar Documentation**: Modern API docs with authentication testing
+- **Automated Testing**: Scripts for API key validation and service testing
+- **Docker Integration**: Complete ELK stack with docker-compose
+- **Development Tools**: Helper utilities and comprehensive documentation
 
 ### **🚀 Ready for Enterprise Use**
 - **Scalable Architecture**: Each service can be scaled independently

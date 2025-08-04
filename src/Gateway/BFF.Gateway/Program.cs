@@ -79,8 +79,18 @@ app.UseSerilogRequestLogging(options =>
 // Add comprehensive request logging middleware
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-// Add API key validation middleware
+// 🔐 SECURITY PIPELINE - ORDER IS CRITICAL!
+// 1. API Key Validation (initializes SecurityContext)
 app.UseMiddleware<ApiKeyValidationMiddleware>();
+
+// 2. API Access Level Verification
+app.UseMiddleware<ApiAccessLevelMiddleware>();
+
+// 3. User Authentication
+app.UseMiddleware<UserAuthenticationMiddleware>();
+
+// 4. User Authorization (final security check)
+app.UseMiddleware<UserAuthorizationMiddleware>();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>

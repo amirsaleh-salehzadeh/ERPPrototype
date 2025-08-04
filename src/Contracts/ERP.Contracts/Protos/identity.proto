@@ -8,13 +8,22 @@ package identity;
 service IdentityService {
   // Validate API Key
   rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
-  
+
+  // Check API Access Level for specific endpoint
+  rpc CheckApiAccess(CheckApiAccessRequest) returns (CheckApiAccessResponse);
+
+  // Authenticate User (JWT, Session, etc.)
+  rpc AuthenticateUser(AuthenticateUserRequest) returns (AuthenticateUserResponse);
+
+  // Check User Authorization for specific endpoint
+  rpc CheckUserAuthorization(CheckUserAuthorizationRequest) returns (CheckUserAuthorizationResponse);
+
   // Create new API Key
   rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
-  
+
   // Revoke API Key
   rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
-  
+
   // Get API Key info
   rpc GetApiKeyInfo(GetApiKeyInfoRequest) returns (GetApiKeyInfoResponse);
 }
@@ -28,11 +37,13 @@ message ValidateApiKeyRequest {
 
 message ValidateApiKeyResponse {
   bool is_valid = 1;
-  string user_id = 2;
-  string user_name = 3;
-  repeated string permissions = 4;
-  string error_message = 5;
-  int64 expires_at = 6;
+  string key_id = 2;
+  string client_name = 3;
+  ApiAccessLevel access_level = 4;
+  repeated string allowed_services = 5;
+  repeated string allowed_endpoints = 6;
+  int64 expires_at = 7;
+  string error_message = 8;
 }
 
 // Request/Response messages for creating API Keys
@@ -77,4 +88,80 @@ message GetApiKeyInfoResponse {
   int64 expires_at = 6;
   bool is_active = 7;
   int32 usage_count = 8;
+}
+
+// API Access Level Check
+message CheckApiAccessRequest {
+  string api_key = 1;
+  string service_name = 2;
+  string endpoint = 3;
+  string method = 4;
+}
+
+message CheckApiAccessResponse {
+  bool has_access = 1;
+  ApiAccessLevel required_level = 2;
+  ApiAccessLevel current_level = 3;
+  string reason = 4;
+  string error_message = 5;
+}
+
+// User Authentication
+message AuthenticateUserRequest {
+  string token = 1;
+  string token_type = 2; // JWT, Session, Bearer, etc.
+  string service_name = 3;
+  string endpoint = 4;
+}
+
+message AuthenticateUserResponse {
+  bool is_authenticated = 1;
+  string user_id = 2;
+  string user_name = 3;
+  string email = 4;
+  repeated string roles = 5;
+  repeated string permissions = 6;
+  UserAccessLevel access_level = 7;
+  int64 token_expires_at = 8;
+  string error_message = 9;
+}
+
+// User Authorization Check
+message CheckUserAuthorizationRequest {
+  string user_id = 1;
+  string service_name = 2;
+  string endpoint = 3;
+  string method = 4;
+  repeated string user_roles = 5;
+  repeated string user_permissions = 6;
+}
+
+message CheckUserAuthorizationResponse {
+  bool is_authorized = 1;
+  UserAccessLevel required_level = 2;
+  UserAccessLevel current_level = 3;
+  repeated string required_roles = 4;
+  repeated string required_permissions = 5;
+  string reason = 6;
+  string error_message = 7;
+}
+
+// Enums
+enum ApiAccessLevel {
+  API_NONE = 0;
+  API_READ_ONLY = 1;
+  API_LIMITED = 2;
+  API_STANDARD = 3;
+  API_PREMIUM = 4;
+  API_ADMIN = 5;
+}
+
+enum UserAccessLevel {
+  USER_NONE = 0;
+  USER_GUEST = 1;
+  USER_USER = 2;
+  USER_POWER_USER = 3;
+  USER_MANAGER = 4;
+  USER_ADMIN = 5;
+  USER_SUPER_ADMIN = 6;
 }

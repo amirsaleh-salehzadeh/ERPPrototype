@@ -52,7 +52,7 @@ public class GrpcClientService : IGrpcClientService, IDisposable
         _logger.LogInformation("🔗 gRPC clients initialized for all microservices");
     }
 
-    // Identity Service
+    // Identity Service - Security Pipeline
     public async Task<ValidateApiKeyResponse> ValidateApiKeyAsync(ValidateApiKeyRequest request)
     {
         try
@@ -62,6 +62,45 @@ public class GrpcClientService : IGrpcClientService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Error calling Identity service ValidateApiKey");
+            throw;
+        }
+    }
+
+    public async Task<CheckApiAccessResponse> CheckApiAccessAsync(CheckApiAccessRequest request)
+    {
+        try
+        {
+            return await _identityClient.CheckApiAccessAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error calling Identity service CheckApiAccess");
+            throw;
+        }
+    }
+
+    public async Task<AuthenticateUserResponse> AuthenticateUserAsync(AuthenticateUserRequest request)
+    {
+        try
+        {
+            return await _identityClient.AuthenticateUserAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error calling Identity service AuthenticateUser");
+            throw;
+        }
+    }
+
+    public async Task<CheckUserAuthorizationResponse> CheckUserAuthorizationAsync(CheckUserAuthorizationRequest request)
+    {
+        try
+        {
+            return await _identityClient.CheckUserAuthorizationAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error calling Identity service CheckUserAuthorization");
             throw;
         }
     }

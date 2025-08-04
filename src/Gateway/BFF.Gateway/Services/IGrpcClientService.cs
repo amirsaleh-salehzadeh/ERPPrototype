@@ -12,8 +12,11 @@ namespace BFF.Gateway.Services;
 /// </summary>
 public interface IGrpcClientService
 {
-    // Identity Service
+    // Identity Service - Security Pipeline
     Task<ValidateApiKeyResponse> ValidateApiKeyAsync(ValidateApiKeyRequest request);
+    Task<CheckApiAccessResponse> CheckApiAccessAsync(CheckApiAccessRequest request);
+    Task<AuthenticateUserResponse> AuthenticateUserAsync(AuthenticateUserRequest request);
+    Task<CheckUserAuthorizationResponse> CheckUserAuthorizationAsync(CheckUserAuthorizationRequest request);
     
     // Weather Service
     Task<ERP.Contracts.Weather.HelloResponse> GetWeatherHelloAsync(ERP.Contracts.Weather.HelloRequest request);
