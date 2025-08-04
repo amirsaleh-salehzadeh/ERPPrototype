@@ -1,270 +1,129 @@
+using System.Text.Json;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen();
+
+// Add HTTP client for fetching OpenAPI specs
+builder.Services.AddHttpClient();
+
+// Add CORS for cross-origin requests
+builder.Services.AddCors(options =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.AddPolicy("AllowAll", policy =>
     {
-        Title = "ERP Prototype API Documentation",
-        Version = "v1",
-        Description = "Centralized API documentation for the ERP Prototype microservices architecture",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "Development Team",
-            Email = "dev@erpprototype.com"
-        }
-    });
-
-    // Add API Key authentication to OpenAPI spec
-    c.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Name = "X-API-Key",
-        Description = "API Key for authentication. Use one of the predefined keys from the README."
-    });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "ApiKey"
-                }
-            },
-            Array.Empty<string>()
-        }
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
-builder.Services.AddLogging();
-
-// Add HTTP client for fetching OpenAPI specs from other services
-builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 
-// Configure Swagger and Scalar
-app.UseSwagger();
-
-// Configure Scalar with proper OpenAPI spec
-app.MapScalarApiReference(options =>
-{
-    options.Title = "ERP Prototype API Documentation - All Services";
-    options.Theme = ScalarTheme.Purple;
-    options.ShowSidebar = true;
-    options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
-    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+// Add health check endpoint
+app.MapGet("/health", () => new {
+    status = "Healthy",
+    service = "Scalar.Documentation",
+    timestamp = DateTime.UtcNow
 });
 
-// Add endpoint to serve aggregated OpenAPI spec
-app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient, ILogger<Program> logger) =>
+// Swagger configuration
+app.UseSwagger();
+
+// Configure Scalar UI
+app.MapScalarApiReference(options =>
 {
-    logger.LogInformation("📋 Generating aggregated OpenAPI specification");
+    options
+        .WithTitle("ERP Weather Service API Documentation")
+        .WithTheme(ScalarTheme.Purple)
+        .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+        .WithSidebar(true);
+});
+
+// Aggregated OpenAPI endpoint
+app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) =>
+{
+    var services = new[]
+    {
+        new { Name = "Weather Service", Url = "http://localhost:5001/swagger/v1/swagger.json" },
+        new { Name = "Identity Service", Url = "http://localhost:5007/swagger/v1/swagger.json" }
+    };
 
     var aggregatedSpec = new
     {
         openapi = "3.0.1",
         info = new
         {
-            title = "ERP Prototype - All Services API",
+            title = "ERP Weather Service - Aggregated API",
             version = "v1",
-            description = "Aggregated API documentation for all ERP microservices. All endpoints require API key authentication and must be accessed through the API Gateway."
+            description = "Complete API documentation for the ERP Weather Service system"
         },
         servers = new[]
         {
-            new { url = "http://localhost:5000", description = "API Gateway (Required - All requests must go through gateway)" }
+            new { url = "http://localhost:5000", description = "BFF Gateway (Recommended)" },
+            new { url = "http://localhost:5001", description = "Weather Service (Direct)" },
+            new { url = "http://localhost:5007", description = "Identity Service (Direct)" }
         },
         paths = new Dictionary<string, object>(),
-        components = new
-        {
-            schemas = new Dictionary<string, object>(),
-            securitySchemes = new Dictionary<string, object>
-            {
-                ["ApiKey"] = new
-                {
-                    type = "apiKey",
-                    @in = "header",
-                    name = "X-API-Key",
-                    description = "API Key for authentication. Required for all requests. Use one of these predefined keys:\n\n• **Admin Master**: VZpK8xuuCPovwHJJhmnlWMrd6f9s_t79-x6iVg2-CiY\n• **Dev Team Lead**: tQcpvaSMM2WJOqaSG952nZEtSoVEER7xKsHhyMXgYd8\n• **QA Automation**: FsCslfwFJ4nGui7x2ExACxe3wQoCN9tGjoHto1JgyJs\n• **Monitoring Service**: lmdKcBWZ3RWvegwPD-pMy_htryWPnoWR4gSwx8zl7_U\n• **Analytics Dashboard**: jZvSH3raXf6bufYVXPNEEX7AHQdXPNwy7IFIHwl5hzM"
-                }
-            }
-        },
-        security = new[]
-        {
-            new Dictionary<string, object[]>
-            {
-                ["ApiKey"] = Array.Empty<object>()
-            }
-        }
+        components = new { schemas = new Dictionary<string, object>() }
     };
 
-    var services = new[]
-    {
-        new { Name = "WeatherService", Url = "http://localhost:5001/swagger/v1/swagger.json", Prefix = "/api/weather" },
-        new { Name = "OrderService", Url = "http://localhost:5003/swagger/v1/swagger.json", Prefix = "/api/orders" },
-        new { Name = "InventoryService", Url = "http://localhost:5004/swagger/v1/swagger.json", Prefix = "/api/inventory" },
-        new { Name = "CustomerService", Url = "http://localhost:5005/swagger/v1/swagger.json", Prefix = "/api/customers" },
-        new { Name = "FinanceService", Url = "http://localhost:5006/swagger/v1/swagger.json", Prefix = "/api/finance" },
-        new { Name = "DocumentationService", Url = "http://localhost:5002/swagger/v1/swagger.json", Prefix = "/api/docs" }
-    };
-
-    var pathsDict = (Dictionary<string, object>)aggregatedSpec.paths;
-    var schemasDict = (Dictionary<string, object>)aggregatedSpec.components.schemas;
+    var allPaths = new Dictionary<string, object>();
+    var allSchemas = new Dictionary<string, object>();
 
     foreach (var service in services)
     {
         try
         {
-            var specJson = await httpClient.GetStringAsync(service.Url);
-            var spec = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(specJson);
+            var response = await httpClient.GetStringAsync(service.Url);
+            var spec = JsonSerializer.Deserialize<JsonElement>(response);
 
-            // Add paths with service prefix
             if (spec.TryGetProperty("paths", out var paths))
             {
                 foreach (var path in paths.EnumerateObject())
                 {
-                    var newPath = service.Prefix + path.Name;
-                    pathsDict[newPath] = System.Text.Json.JsonSerializer.Deserialize<object>(path.Value.GetRawText())!;
+                    var pathKey = service.Name == "Weather Service" ? $"/api/weather{path.Name}" : path.Name;
+                    allPaths[pathKey] = path.Value;
                 }
             }
 
-            // Add schemas
             if (spec.TryGetProperty("components", out var components) &&
                 components.TryGetProperty("schemas", out var schemas))
             {
                 foreach (var schema in schemas.EnumerateObject())
                 {
-                    var schemaKey = $"{service.Name}_{schema.Name}";
-                    schemasDict[schemaKey] = System.Text.Json.JsonSerializer.Deserialize<object>(schema.Value.GetRawText())!;
+                    allSchemas[$"{service.Name}_{schema.Name}"] = schema.Value;
                 }
             }
-
-            logger.LogInformation("✅ {ServiceName} spec aggregated successfully", service.Name);
         }
         catch (Exception ex)
         {
-            logger.LogWarning("⚠️ Failed to aggregate {ServiceName} spec: {Error}", service.Name, ex.Message);
+            Console.WriteLine($"⚠️ Could not fetch OpenAPI spec from {service.Name}: {ex.Message}");
         }
     }
 
-    return Results.Json(aggregatedSpec);
-})
-.WithName("GetAggregatedOpenApiSpec")
-.ExcludeFromDescription();
-
-// Middleware to log incoming requests
-app.Use(async (context, next) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("📚 Documentation service accessed - Path: {Path}", context.Request.Path);
-    await next();
+    return Results.Json(new
+    {
+        openapi = aggregatedSpec.openapi,
+        info = aggregatedSpec.info,
+        servers = aggregatedSpec.servers,
+        paths = allPaths,
+        components = new { schemas = allSchemas }
+    });
 });
 
-// Configure aggregated Scalar documentation
-app.MapScalarApiReference("/scalar/all", options =>
-{
-    options.Title = "🚀 ERP Prototype - All Services Combined";
-    options.Theme = ScalarTheme.Purple;
-    options.ShowSidebar = true;
-    options.OpenApiRoutePattern = "/swagger/v1/swagger-aggregated.json";
-    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
-});
+// Redirect root to Scalar UI
+app.MapGet("/", () => Results.Redirect("/scalar/v1"));
 
-// API endpoints for documentation service
-app.MapGet("/", () => Results.Redirect("/scalar/all"))
-.WithName("RedirectToScalar")
-.ExcludeFromDescription();
-
-// Hello World endpoint
-app.MapGet("/hello", () => new { Message = "Hello from Documentation Service!", Service = "DocumentationService", Timestamp = DateTime.UtcNow })
-.WithName("HelloWorld")
-.WithTags("General")
-.WithSummary("Hello World endpoint")
-.WithDescription("Returns a hello message from the Documentation Service")
-.WithOpenApi();
-
-app.MapGet("/health", () => new { Status = "Healthy", Service = "DocumentationService", Timestamp = DateTime.UtcNow })
-.WithName("HealthCheck")
-.WithTags("Health")
-.WithSummary("Health check endpoint for the Documentation service")
-.WithOpenApi();
-
-// Endpoint to aggregate OpenAPI specs from other services
-// Sample API endpoints for demonstration
-app.MapGet("/api/services", () => new
-{
-    Services = new[]
-    {
-        new { Name = "WeatherService", Status = "Running", Port = 5001, Description = "Weather forecast API" },
-        new { Name = "DocumentationService", Status = "Running", Port = 5002, Description = "API documentation service" },
-        new { Name = "Gateway", Status = "Running", Port = 5000, Description = "BFF Gateway with YARP" }
-    },
-    Timestamp = DateTime.UtcNow
-})
-.WithName("GetServices")
-.WithTags("Services")
-.WithSummary("Get list of all microservices in the ERP system")
-.WithDescription("Returns information about all microservices including their status and endpoints")
-.WithOpenApi();
-
-app.MapGet("/api/architecture", () => new
-{
-    Architecture = "Microservices",
-    Gateway = "YARP (Yet Another Reverse Proxy)",
-    Documentation = "Scalar API Documentation",
-    Framework = ".NET 8",
-    Containerization = "Docker",
-    Orchestration = "Kubernetes Ready",
-    Features = new[]
-    {
-        "Service Discovery",
-        "Load Balancing",
-        "Health Checks",
-        "Centralized Logging",
-        "API Gateway Pattern",
-        "Scalable Architecture"
-    }
-})
-.WithName("GetArchitecture")
-.WithTags("System")
-.WithSummary("Get system architecture information")
-.WithDescription("Returns detailed information about the ERP prototype architecture and technologies used")
-.WithOpenApi();
-
-app.MapGet("/api/specs", async (HttpClient httpClient, ILogger<Program> logger) =>
-{
-    logger.LogInformation("📋 Fetching API specifications from services");
-
-    var specs = new Dictionary<string, object>();
-
-    try
-    {
-        // Fetch WeatherService OpenAPI spec
-        var weatherSpec = await httpClient.GetStringAsync("http://localhost:5001/swagger/v1/swagger.json");
-        specs.Add("WeatherService", System.Text.Json.JsonSerializer.Deserialize<object>(weatherSpec));
-        logger.LogInformation("✅ WeatherService spec fetched successfully");
-    }
-    catch (Exception ex)
-    {
-        logger.LogWarning("⚠️ Failed to fetch WeatherService spec: {Error}", ex.Message);
-        specs.Add("WeatherService", new { error = "Service unavailable" });
-    }
-
-    return specs;
-})
-.WithName("GetApiSpecs")
-.WithTags("Integration")
-.WithSummary("Aggregate OpenAPI specs from other services")
-.WithDescription("Fetches and aggregates OpenAPI specifications from all microservices")
-.WithOpenApi();
+Console.WriteLine("📚 Scalar Documentation Service starting...");
+Console.WriteLine("🌐 Available at: http://localhost:5002");
+Console.WriteLine("📖 Scalar UI: http://localhost:5002/scalar/v1");
+Console.WriteLine("📋 Aggregated API: http://localhost:5002/swagger/v1/swagger-aggregated.json");
 
 app.Run();

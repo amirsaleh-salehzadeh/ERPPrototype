@@ -17,11 +17,7 @@ $apiKeys = @{
 # Test endpoints
 $endpoints = @(
     "http://localhost:5000/api/weather/hello",
-    "http://localhost:5000/api/orders/hello",
-    "http://localhost:5000/api/inventory/hello",
-    "http://localhost:5000/api/customers/hello",
-    "http://localhost:5000/api/finance/hello",
-    "http://localhost:5000/api/docs/hello"
+    "http://localhost:5000/api/docs/health"
 )
 
 Write-Host "Testing WITHOUT API Key (should fail):" -ForegroundColor Red

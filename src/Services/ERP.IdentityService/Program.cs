@@ -3,22 +3,19 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+// Configure Kestrel for HTTP/2 support (required for gRPC)
+builder.WebHost.ConfigureKestrel(options =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    // Listen on HTTP/1.1 for REST API and Swagger
+    options.ListenLocalhost(5007, listenOptions =>
     {
-        Title = "ERP Identity Service API",
-        Version = "v1",
-        Description = "Handles API key validation, authentication, and authorization for the ERP system with Redis storage",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "Identity Service Team",
-            Email = "identity@erpprototype.com"
-        }
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
     });
 });
+
+// Add services to the container.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddLogging();
 
 // Add Redis connection (optional)
@@ -46,7 +43,7 @@ builder.Services.AddGrpc();
 // Add Identity services - Use Hybrid service that works with or without Redis
 builder.Services.AddSingleton<IApiKeyService, HybridApiKeyService>();
 
-// Add gRPC service implementation (disabled for now)
+// Add gRPC service implementation (temporarily disabled for build)
 // builder.Services.AddScoped<IdentityGrpcService>();
 builder.Services.AddSingleton<ApiKeySeederService>();
 
@@ -80,7 +77,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Configure gRPC endpoint (disabled for now - using REST API)
+// Configure gRPC endpoint (temporarily disabled for build)
 // app.MapGrpcService<IdentityGrpcService>();
 
 // Hello World endpoint

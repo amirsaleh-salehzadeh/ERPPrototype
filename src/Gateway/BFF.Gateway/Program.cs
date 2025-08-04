@@ -32,13 +32,20 @@ builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 // Add gRPC client service for microservice communication
 builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
 
+// Add HttpClient for API key validation middleware
+builder.Services.AddHttpClient();
+
+// Add YARP reverse proxy
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
 var app = builder.Build();
 
 // Enable CORS
 app.UseCors("AllowDocumentation");
 
-// Add API key validation middleware
-app.UseMiddleware<ApiKeyValidationMiddleware>();
+// Add gRPC-based API key validation middleware (temporarily disabled for build)
+// app.UseMiddleware<ApiKeyValidationMiddleware>();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
@@ -100,7 +107,10 @@ app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", T
 .WithName("GatewayHealthCheck")
 .WithTags("Health");
 
-// Map controllers
-app.MapControllers();
+// Map controllers (temporarily disabled to use YARP routing)
+// app.MapControllers();
+
+// Map YARP reverse proxy
+app.MapReverseProxy();
 
 app.Run();

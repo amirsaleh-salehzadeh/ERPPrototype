@@ -49,7 +49,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("products")]
-    public async Task<IActionResult> GetProducts([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] ProductCategory category = ProductCategory.All, [FromQuery] bool lowStockOnly = false)
+    public async Task<IActionResult> GetProducts([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] ProductCategory category = ProductCategory.Electronics, [FromQuery] bool lowStockOnly = false)
     {
         try
         {

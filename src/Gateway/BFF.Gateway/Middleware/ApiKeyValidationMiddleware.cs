@@ -39,6 +39,8 @@ public class ApiKeyValidationMiddleware
         try
         {
             // Validate API key with Identity service via gRPC
+            _logger.LogInformation("🔍 Validating API key via gRPC for service: {ServiceName}", ExtractServiceName(context.Request.Path));
+
             var request = new ValidateApiKeyRequest
             {
                 ApiKey = apiKey,
@@ -46,28 +48,28 @@ public class ApiKeyValidationMiddleware
                 Endpoint = context.Request.Path.ToString()
             };
 
-            var validationResult = await _grpcClientService.ValidateApiKeyAsync(request);
+            var response = await _grpcClientService.ValidateApiKeyAsync(request);
 
-            if (!validationResult.IsValid)
+            if (!response.IsValid)
             {
-                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, validationResult.ErrorMessage);
+                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, response.ErrorMessage);
                 context.Response.StatusCode = 401;
-                await context.Response.WriteAsync($"Invalid API key: {validationResult.ErrorMessage}");
+                await context.Response.WriteAsync($"Invalid API key: {response.ErrorMessage}");
                 return;
             }
 
             // Add user information to request headers for downstream services
-            context.Request.Headers["X-User-Id"] = validationResult.UserId;
-            context.Request.Headers["X-User-Name"] = validationResult.UserName;
-            context.Request.Headers["X-User-Permissions"] = string.Join(",", validationResult.Permissions);
+            context.Request.Headers["X-User-Id"] = response.UserId ?? string.Empty;
+            context.Request.Headers["X-User-Name"] = response.UserName ?? string.Empty;
+            context.Request.Headers["X-User-Permissions"] = string.Join(",", response.Permissions);
 
-            _logger.LogInformation("✅ API key validated for user: {UserName}, path: {Path}", validationResult.UserName, context.Request.Path);
+            _logger.LogInformation("✅ API key validated via gRPC for user: {UserName}, path: {Path}", response.UserName, context.Request.Path);
 
             await _next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error validating API key for path: {Path}", context.Request.Path);
+            _logger.LogError(ex, "❌ Error calling Identity service via gRPC");
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Internal server error during authentication");
         }
@@ -81,7 +83,7 @@ public class ApiKeyValidationMiddleware
             "/api/gateway/services",
             "/swagger",
             "/scalar",
-            "/api/docs/scalar"  // Allow Scalar documentation through gateway
+            "/api/docs"  // Allow all documentation endpoints through gateway
             // Documentation endpoints are public - users can view APIs freely
             // But actual API requests from Scalar will require authentication
         };
@@ -92,12 +94,8 @@ public class ApiKeyValidationMiddleware
     private string ExtractServiceName(string path)
     {
         if (path.StartsWith("/api/weather")) return "WeatherService";
-        if (path.StartsWith("/api/orders")) return "OrderService";
-        if (path.StartsWith("/api/inventory")) return "InventoryService";
-        if (path.StartsWith("/api/customers")) return "CustomerService";
-        if (path.StartsWith("/api/finance")) return "FinanceService";
         if (path.StartsWith("/api/docs")) return "DocumentationService";
-        
+
         return "Unknown";
     }
 

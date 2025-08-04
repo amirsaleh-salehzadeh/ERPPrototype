@@ -2,20 +2,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Weather Service API",
-        Version = "v1",
-        Description = "Provides weather forecast data for the ERP Prototype system",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "Weather Service Team",
-            Email = "weather@erpprototype.com"
-        }
-    });
-});
+builder.Services.AddSwaggerGen();
 builder.Services.AddLogging();
 
 // Add CORS for Documentation service

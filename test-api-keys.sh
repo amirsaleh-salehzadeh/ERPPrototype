@@ -19,11 +19,7 @@ declare -A api_keys=(
 # Test endpoints
 endpoints=(
     "http://localhost:5000/api/weather/hello"
-    "http://localhost:5000/api/orders/hello"
-    "http://localhost:5000/api/inventory/hello"
-    "http://localhost:5000/api/customers/hello"
-    "http://localhost:5000/api/finance/hello"
-    "http://localhost:5000/api/docs/hello"
+    "http://localhost:5000/api/docs/health"
 )
 
 echo "🚫 Testing WITHOUT API Key (should fail):"

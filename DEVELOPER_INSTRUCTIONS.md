@@ -19,7 +19,8 @@ You now have a **full ERP prototype** with 6 microservices:
 ## 🚀 **Quick Start - Run All Services**
 
 ### **Prerequisites:**
-- **.NET 8 SDK** installed
+- **.NET 10 SDK** installed
+- **Redis** (optional - for API key storage, falls back to in-memory)
 - **Git** for cloning
 - **curl** or **Postman** for testing
 
