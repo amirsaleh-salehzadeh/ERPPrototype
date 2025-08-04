@@ -2,8 +2,30 @@ using Yarp.ReverseProxy.Configuration;
 using BFF.Gateway.Services;
 using BFF.Gateway.Models;
 using BFF.Gateway.Middleware;
+using Serilog;
+using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
+// Configure Serilog early to capture startup logs
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+try
+{
+    Log.Information("🚀 Starting BFF Gateway application");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Configure Serilog
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .Enrich.WithEnvironmentName()
+        .Enrich.WithThreadId());
 
 // Load service mappings from JSON file
 builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
@@ -11,8 +33,7 @@ builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reload
 // Add controllers for REST API endpoints
 builder.Services.AddControllers();
 
-// Add logging
-builder.Services.AddLogging();
+// Serilog is configured via Host.UseSerilog above
 
 // Add CORS for Documentation service
 builder.Services.AddCors(options =>
@@ -36,6 +57,27 @@ var app = builder.Build();
 
 // Enable CORS
 app.UseCors("AllowDocumentation");
+
+// Add Serilog request logging
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "🌐 HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.GetLevel = (httpContext, elapsed, ex) => ex != null
+        ? LogEventLevel.Error
+        : httpContext.Response.StatusCode > 499
+            ? LogEventLevel.Error
+            : LogEventLevel.Information;
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+        diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.FirstOrDefault());
+        diagnosticContext.Set("RemoteIP", httpContext.Connection.RemoteIpAddress?.ToString());
+    };
+});
+
+// Add comprehensive request logging middleware
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 // Add API key validation middleware
 app.UseMiddleware<ApiKeyValidationMiddleware>();
@@ -103,4 +145,17 @@ app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", T
 // Map controllers
 app.MapControllers();
 
+Log.Information("🎯 BFF Gateway configured and ready to start");
+
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "💥 BFF Gateway terminated unexpectedly");
+}
+finally
+{
+    Log.Information("🛑 BFF Gateway shutting down");
+    Log.CloseAndFlush();
+}

@@ -49,7 +49,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("products")]
-    public async Task<IActionResult> GetProducts([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] ProductCategory category = ProductCategory.All, [FromQuery] bool lowStockOnly = false)
+    public async Task<IActionResult> GetProducts([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] ProductCategory? category = null, [FromQuery] bool lowStockOnly = false)
     {
         try
         {
@@ -59,7 +59,7 @@ public class InventoryController : ControllerBase
                 UserName = Request.Headers["X-User-Name"].FirstOrDefault() ?? "",
                 Page = page,
                 PageSize = pageSize,
-                Category = category,
+                Category = category ?? ProductCategory.Electronics, // Default to Electronics if not specified
                 LowStockOnly = lowStockOnly
             };
             

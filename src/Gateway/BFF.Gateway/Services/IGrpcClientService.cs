@@ -16,7 +16,7 @@ public interface IGrpcClientService
     Task<ValidateApiKeyResponse> ValidateApiKeyAsync(ValidateApiKeyRequest request);
     
     // Weather Service
-    Task<HelloResponse> GetWeatherHelloAsync(ERP.Contracts.Weather.HelloRequest request);
+    Task<ERP.Contracts.Weather.HelloResponse> GetWeatherHelloAsync(ERP.Contracts.Weather.HelloRequest request);
     Task<WeatherForecastResponse> GetWeatherForecastAsync(WeatherForecastRequest request);
     Task<ERP.Contracts.Weather.HealthResponse> GetWeatherHealthAsync(ERP.Contracts.Weather.HealthRequest request);
     
