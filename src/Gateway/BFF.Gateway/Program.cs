@@ -14,6 +14,9 @@ builder.Services.AddControllers();
 // Add logging
 builder.Services.AddLogging();
 
+// Add HTTP client for API key validation
+builder.Services.AddHttpClient();
+
 // Add CORS for Documentation service
 builder.Services.AddCors(options =>
 {
@@ -29,8 +32,8 @@ builder.Services.AddCors(options =>
 // Add service mapping service
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 
-// Add gRPC client service for microservice communication
-builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
+// Add gRPC client service for microservice communication (temporarily disabled - using HTTP for API key validation)
+// builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
 
 // Add HttpClient for API key validation middleware
 builder.Services.AddHttpClient();
@@ -44,8 +47,8 @@ var app = builder.Build();
 // Enable CORS
 app.UseCors("AllowDocumentation");
 
-// Add gRPC-based API key validation middleware (temporarily disabled for build)
-// app.UseMiddleware<ApiKeyValidationMiddleware>();
+// Add HTTP-based API key validation middleware
+app.UseMiddleware<ApiKeyValidationMiddleware>();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>

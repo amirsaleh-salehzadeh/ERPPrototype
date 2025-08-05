@@ -2,7 +2,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddLogging();
 
 // Add CORS for Documentation service
@@ -19,11 +18,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Using OpenAPI without Swagger UI
 
 app.UseHttpsRedirection();
 
@@ -91,6 +86,116 @@ app.MapGet("/health", () => new { Status = "Healthy", Service = "WeatherService"
 .WithSummary("Health check endpoint")
 .WithDescription("Returns the health status of the Weather Service")
 .WithOpenApi();
+
+// OpenAPI specification endpoint
+app.MapGet("/swagger/v1/swagger.json", () =>
+{
+    var openApiJson = """
+    {
+        "openapi": "3.0.1",
+        "info": {
+            "title": "Weather Service API",
+            "version": "v1",
+            "description": "Weather forecast service providing 5-day weather predictions"
+        },
+        "servers": [
+            {
+                "url": "http://localhost:5001",
+                "description": "Weather Service"
+            }
+        ],
+        "paths": {
+            "/weatherforecast": {
+                "get": {
+                    "tags": ["Weather"],
+                    "summary": "Get weather forecast",
+                    "description": "Returns a 5-day weather forecast with temperature and weather conditions",
+                    "responses": {
+                        "200": {
+                            "description": "Weather forecast data",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/WeatherForecast"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/hello": {
+                "get": {
+                    "tags": ["General"],
+                    "summary": "Hello World endpoint",
+                    "description": "Returns a hello message from the Weather Service",
+                    "responses": {
+                        "200": {
+                            "description": "Hello message",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Message": {"type": "string"},
+                                            "Service": {"type": "string"},
+                                            "Timestamp": {"type": "string", "format": "date-time"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/health": {
+                "get": {
+                    "tags": ["Health"],
+                    "summary": "Health check endpoint",
+                    "description": "Returns the health status of the Weather Service",
+                    "responses": {
+                        "200": {
+                            "description": "Service health status",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Status": {"type": "string"},
+                                            "Service": {"type": "string"},
+                                            "Timestamp": {"type": "string", "format": "date-time"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "WeatherForecast": {
+                    "type": "object",
+                    "properties": {
+                        "Date": {"type": "string", "format": "date", "example": "2024-08-05"},
+                        "TemperatureC": {"type": "integer", "format": "int32", "example": 25},
+                        "TemperatureF": {"type": "integer", "format": "int32", "example": 77},
+                        "Summary": {"type": "string", "nullable": true, "example": "Warm"}
+                    }
+                }
+            }
+        }
+    }
+    """;
+
+    return Results.Content(openApiJson, "application/json");
+})
+.WithName("GetOpenApiSpec")
+.WithTags("OpenAPI");
 
 app.Run();
 

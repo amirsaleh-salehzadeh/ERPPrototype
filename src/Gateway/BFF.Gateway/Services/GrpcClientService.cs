@@ -34,7 +34,7 @@ public class GrpcClientService : IGrpcClientService, IDisposable
         _logger = logger;
         
         // Create gRPC channels for each service
-        _identityChannel = GrpcChannel.ForAddress("http://localhost:5007");
+        _identityChannel = GrpcChannel.ForAddress("http://localhost:5008"); // Dedicated gRPC port
         _weatherChannel = GrpcChannel.ForAddress("http://localhost:5001");
         _orderChannel = GrpcChannel.ForAddress("http://localhost:5003");
         _inventoryChannel = GrpcChannel.ForAddress("http://localhost:5004");

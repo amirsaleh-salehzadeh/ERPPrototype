@@ -5,7 +5,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // Add HTTP client for fetching OpenAPI specs
 builder.Services.AddHttpClient();
@@ -33,17 +32,17 @@ app.MapGet("/health", () => new {
     timestamp = DateTime.UtcNow
 });
 
-// Swagger configuration
-app.UseSwagger();
+// Using OpenAPI without Swagger
 
-// Configure Scalar UI
+// Configure Scalar UI with aggregated OpenAPI spec
 app.MapScalarApiReference(options =>
 {
     options
-        .WithTitle("ERP Weather Service API Documentation")
+        .WithTitle("ERP Microservices API Documentation")
         .WithTheme(ScalarTheme.Purple)
         .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-        .WithSidebar(true);
+        .WithSidebar(true)
+        .WithOpenApiRoutePattern("/swagger/v1/swagger-aggregated.json");
 });
 
 // Aggregated OpenAPI endpoint
@@ -89,7 +88,12 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) 
                 foreach (var path in paths.EnumerateObject())
                 {
                     var pathKey = service.Name == "Weather Service" ? $"/api/weather{path.Name}" : path.Name;
-                    allPaths[pathKey] = path.Value;
+
+                    // Fix schema references in the path
+                    var pathJson = path.Value.GetRawText();
+                    pathJson = pathJson.Replace("#/components/schemas/", $"#/components/schemas/{service.Name.Replace(" ", "_")}_");
+
+                    allPaths[pathKey] = JsonSerializer.Deserialize<JsonElement>(pathJson);
                 }
             }
 
@@ -98,7 +102,7 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) 
             {
                 foreach (var schema in schemas.EnumerateObject())
                 {
-                    allSchemas[$"{service.Name}_{schema.Name}"] = schema.Value;
+                    allSchemas[$"{service.Name.Replace(" ", "_")}_{schema.Name}"] = schema.Value;
                 }
             }
         }

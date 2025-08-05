@@ -6,16 +6,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure Kestrel for HTTP/2 support (required for gRPC)
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // Listen on HTTP/1.1 for REST API and Swagger
+    // Listen on HTTP/1.1 for REST API
     options.ListenLocalhost(5007, listenOptions =>
     {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+    });
+
+    // Listen on HTTP/2 for gRPC (separate port)
+    options.ListenLocalhost(5008, listenOptions =>
+    {
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
     });
 });
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddLogging();
 
 // Add Redis connection (optional)
@@ -43,18 +48,14 @@ builder.Services.AddGrpc();
 // Add Identity services - Use Hybrid service that works with or without Redis
 builder.Services.AddSingleton<IApiKeyService, HybridApiKeyService>();
 
-// Add gRPC service implementation (temporarily disabled for build)
-// builder.Services.AddScoped<IdentityGrpcService>();
+// Add gRPC service implementation
+builder.Services.AddScoped<IdentityGrpcService>();
 builder.Services.AddSingleton<ApiKeySeederService>();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Using OpenAPI without Swagger UI
 
 app.UseHttpsRedirection();
 
@@ -77,8 +78,8 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Configure gRPC endpoint (temporarily disabled for build)
-// app.MapGrpcService<IdentityGrpcService>();
+// Configure gRPC endpoint
+app.MapGrpcService<IdentityGrpcService>();
 
 // Hello World endpoint
 app.MapGet("/hello", () => new { Message = "Hello from Identity Service!", Service = "IdentityService", Timestamp = DateTime.UtcNow })
@@ -158,6 +159,148 @@ app.MapPost("/seed/predefined", async (ApiKeySeederService seeder, ILogger<Progr
 .WithSummary("Seed predefined API keys")
 .WithDescription("Creates predefined API keys for testing")
 .WithOpenApi();
+
+// OpenAPI specification endpoint
+app.MapGet("/swagger/v1/swagger.json", () =>
+{
+    var openApiJson = """
+    {
+        "openapi": "3.0.1",
+        "info": {
+            "title": "Identity Service API",
+            "version": "v1",
+            "description": "API key management and validation service for ERP system"
+        },
+        "servers": [
+            {
+                "url": "http://localhost:5007",
+                "description": "Identity Service"
+            }
+        ],
+        "paths": {
+            "/hello": {
+                "get": {
+                    "tags": ["General"],
+                    "summary": "Hello World endpoint",
+                    "description": "Returns a hello message from the Identity Service",
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Message": {"type": "string"},
+                                            "Service": {"type": "string"},
+                                            "Timestamp": {"type": "string", "format": "date-time"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api-keys": {
+                "post": {
+                    "tags": ["API Keys"],
+                    "summary": "Create a new API key",
+                    "description": "Creates a new API key for authentication",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CreateApiKeyRequest"
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "API key created successfully"
+                        }
+                    }
+                }
+            },
+            "/validate": {
+                "post": {
+                    "tags": ["API Keys"],
+                    "summary": "Validate an API key",
+                    "description": "Validates an API key and returns user information and permissions",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidateApiKeyRequest"
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Validation result"
+                        }
+                    }
+                }
+            },
+            "/health": {
+                "get": {
+                    "tags": ["Health"],
+                    "summary": "Health check endpoint",
+                    "description": "Returns the health status of the Identity Service",
+                    "responses": {
+                        "200": {
+                            "description": "Service health status",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "Status": {"type": "string"},
+                                            "Service": {"type": "string"},
+                                            "Timestamp": {"type": "string", "format": "date-time"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "CreateApiKeyRequest": {
+                    "type": "object",
+                    "required": ["UserName", "Description", "Permissions", "ExpiresInDays"],
+                    "properties": {
+                        "UserName": {"type": "string", "example": "john.doe"},
+                        "Description": {"type": "string", "example": "API key for testing"},
+                        "Permissions": {"type": "array", "items": {"type": "string"}, "example": ["read", "write"]},
+                        "ExpiresInDays": {"type": "integer", "example": 30}
+                    }
+                },
+                "ValidateApiKeyRequest": {
+                    "type": "object",
+                    "required": ["ApiKey", "ServiceName", "Endpoint"],
+                    "properties": {
+                        "ApiKey": {"type": "string", "example": "your-api-key-here"},
+                        "ServiceName": {"type": "string", "example": "WeatherService"},
+                        "Endpoint": {"type": "string", "example": "/weatherforecast"}
+                    }
+                }
+            }
+        }
+    }
+    """;
+
+    return Results.Content(openApiJson, "application/json");
+})
+.WithName("GetOpenApiSpec")
+.WithTags("OpenAPI");
 
 // Startup seeding
 var seederService = app.Services.GetRequiredService<ApiKeySeederService>();

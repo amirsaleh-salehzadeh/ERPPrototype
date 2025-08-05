@@ -1,5 +1,7 @@
 using BFF.Gateway.Services;
 using ERP.Contracts.Identity;
+using System.Text.Json;
+using System.Text;
 
 namespace BFF.Gateway.Middleware;
 
@@ -7,13 +9,13 @@ public class ApiKeyValidationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyValidationMiddleware> _logger;
-    private readonly IGrpcClientService _grpcClientService;
+    private readonly HttpClient _httpClient;
 
-    public ApiKeyValidationMiddleware(RequestDelegate next, ILogger<ApiKeyValidationMiddleware> logger, IGrpcClientService grpcClientService)
+    public ApiKeyValidationMiddleware(RequestDelegate next, ILogger<ApiKeyValidationMiddleware> logger, IHttpClientFactory httpClientFactory)
     {
         _next = next;
         _logger = logger;
-        _grpcClientService = grpcClientService;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -38,38 +40,58 @@ public class ApiKeyValidationMiddleware
 
         try
         {
-            // Validate API key with Identity service via gRPC
-            _logger.LogInformation("🔍 Validating API key via gRPC for service: {ServiceName}", ExtractServiceName(context.Request.Path));
+            // Validate API key with Identity service via HTTP REST
+            _logger.LogInformation("🔍 Validating API key via HTTP for service: {ServiceName}", ExtractServiceName(context.Request.Path));
 
-            var request = new ValidateApiKeyRequest
+            var requestPayload = new
             {
                 ApiKey = apiKey,
                 ServiceName = ExtractServiceName(context.Request.Path),
                 Endpoint = context.Request.Path.ToString()
             };
 
-            var response = await _grpcClientService.ValidateApiKeyAsync(request);
+            var json = JsonSerializer.Serialize(requestPayload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            if (!response.IsValid)
+            var httpResponse = await _httpClient.PostAsync("http://localhost:5007/validate", content);
+            var responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+            if (!httpResponse.IsSuccessStatusCode)
             {
-                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, response.ErrorMessage);
+                _logger.LogWarning("🚫 Identity service returned error: {StatusCode} - {Content}", httpResponse.StatusCode, responseContent);
                 context.Response.StatusCode = 401;
-                await context.Response.WriteAsync($"Invalid API key: {response.ErrorMessage}");
+                await context.Response.WriteAsync("Invalid API key");
+                return;
+            }
+
+            var validationResult = JsonSerializer.Deserialize<JsonElement>(responseContent);
+
+            if (!validationResult.GetProperty("isValid").GetBoolean())
+            {
+                var errorMessage = validationResult.TryGetProperty("errorMessage", out var errorProp) ? errorProp.GetString() : "Unknown error";
+                _logger.LogWarning("🚫 Invalid API key for path: {Path} - {Error}", context.Request.Path, errorMessage);
+                context.Response.StatusCode = 401;
+                await context.Response.WriteAsync($"Invalid API key: {errorMessage}");
                 return;
             }
 
             // Add user information to request headers for downstream services
-            context.Request.Headers["X-User-Id"] = response.UserId ?? string.Empty;
-            context.Request.Headers["X-User-Name"] = response.UserName ?? string.Empty;
-            context.Request.Headers["X-User-Permissions"] = string.Join(",", response.Permissions);
+            var userId = validationResult.TryGetProperty("userId", out var userIdProp) ? userIdProp.GetString() : "";
+            var userName = validationResult.TryGetProperty("userName", out var userNameProp) ? userNameProp.GetString() : "";
+            var permissions = validationResult.TryGetProperty("permissions", out var permissionsProp) ?
+                string.Join(",", permissionsProp.EnumerateArray().Select(p => p.GetString())) : "";
 
-            _logger.LogInformation("✅ API key validated via gRPC for user: {UserName}, path: {Path}", response.UserName, context.Request.Path);
+            context.Request.Headers["X-User-Id"] = userId ?? string.Empty;
+            context.Request.Headers["X-User-Name"] = userName ?? string.Empty;
+            context.Request.Headers["X-User-Permissions"] = permissions;
+
+            _logger.LogInformation("✅ API key validated via HTTP for user: {UserName}, path: {Path}", userName, context.Request.Path);
 
             await _next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error calling Identity service via gRPC");
+            _logger.LogError(ex, "❌ Error calling Identity service via HTTP");
             context.Response.StatusCode = 500;
             await context.Response.WriteAsync("Internal server error during authentication");
         }
