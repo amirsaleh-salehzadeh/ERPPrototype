@@ -1,6 +1,8 @@
+// TODO: Uncomment when gRPC client issues are resolved
+#if false
 using Microsoft.AspNetCore.Mvc;
 using BFF.Gateway.Services;
-using ERP.Contracts.Weather;
+using Playground.WeatherService.Contracts;
 using Google.Protobuf.WellKnownTypes;
 
 namespace BFF.Gateway.Controllers;
@@ -112,3 +114,4 @@ public class WeatherController : ControllerBase
         }
     }
 }
+#endif

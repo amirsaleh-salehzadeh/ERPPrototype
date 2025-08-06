@@ -1,0 +1,46 @@
+{
+  "HeaderSanitization": {
+    "HeadersToRemove": [
+      "x-api-key",
+      "authorization",
+      "x-auth-token",
+      "x-session-id",
+      "cookie",
+      "x-forwarded-*",
+      "x-real-ip",
+      "x-original-*",
+      "x-internal-gateway-*",
+      "x-upstream-*",
+      "x-backend-*"
+    ],
+    "HeadersToMask": [
+      "x-user-id",
+      "x-correlation-id",
+      "x-request-id",
+      "x-trace-id",
+      "x-client-id",
+      "x-tenant-id"
+    ],
+    "ResponseHeadersToRemove": [
+      "x-service-*",
+      "x-user-*",
+      "x-internal-*",
+      "server",
+      "x-powered-by",
+      "x-gateway-*",
+      "x-processing-time",
+      "x-cache-*"
+    ],
+    "ResponseHeadersToMask": [
+      "x-correlation-id",
+      "x-request-id"
+    ],
+    "SensitivePatterns": [
+      "\\b[A-Za-z0-9]{32,}\\b",
+      "\\b[A-Za-z0-9+/]{20,}={0,2}\\b",
+      "\\bBearer\\s+[A-Za-z0-9\\-._~+/]+=*",
+      "\\bBasic\\s+[A-Za-z0-9+/]+=*",
+      "\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b"
+    ]
+  }
+}

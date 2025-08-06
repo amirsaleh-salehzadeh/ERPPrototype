@@ -1,6 +1,0 @@
-{
-  "userName": "test_user",
-  "description": "Test API key for pipeline demo",
-  "permissions": ["read", "write"],
-  "expiresInDays": 30
-}

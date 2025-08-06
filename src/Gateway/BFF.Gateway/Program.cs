@@ -2,11 +2,15 @@ using Yarp.ReverseProxy.Configuration;
 using BFF.Gateway.Services;
 using BFF.Gateway.Models;
 using BFF.Gateway.Middleware;
+using BFF.Gateway.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Load service mappings from JSON file
 builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
+
+// Load header sanitization configuration
+builder.Configuration.AddJsonFile("headersanitization.json", optional: true, reloadOnChange: true);
 
 // Add controllers for REST API endpoints
 builder.Services.AddControllers();
@@ -32,8 +36,48 @@ builder.Services.AddCors(options =>
 // Add service mapping service
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 
-// Add gRPC client service for microservice communication (temporarily disabled - using HTTP for API key validation)
-// builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
+// Add header sanitization with configuration from JSON file
+builder.Services.AddHeaderSanitization(options =>
+{
+    // Load configuration from appsettings or headersanitization.json
+    var config = builder.Configuration.GetSection("HeaderSanitization");
+
+    if (config.Exists())
+    {
+        // Load from configuration file
+        options.HeadersToRemove = config.GetSection("HeadersToRemove").Get<List<string>>() ?? options.HeadersToRemove;
+        options.HeadersToMask = config.GetSection("HeadersToMask").Get<List<string>>() ?? options.HeadersToMask;
+        options.ResponseHeadersToRemove = config.GetSection("ResponseHeadersToRemove").Get<List<string>>() ?? options.ResponseHeadersToRemove;
+        options.ResponseHeadersToMask = config.GetSection("ResponseHeadersToMask").Get<List<string>>() ?? options.ResponseHeadersToMask;
+        options.SensitivePatterns = config.GetSection("SensitivePatterns").Get<List<string>>() ?? options.SensitivePatterns;
+    }
+    else
+    {
+        // Fallback to default configuration with custom additions
+        options.HeadersToRemove.AddRange(new[]
+        {
+            "x-internal-gateway-*",    // Remove internal gateway headers
+            "x-upstream-*",            // Remove upstream service headers
+            "x-backend-*"              // Remove backend service headers
+        });
+
+        options.HeadersToMask.AddRange(new[]
+        {
+            "x-client-id",             // Mask client identifiers
+            "x-tenant-id"              // Mask tenant identifiers
+        });
+
+        options.ResponseHeadersToRemove.AddRange(new[]
+        {
+            "x-gateway-*",             // Remove gateway processing headers
+            "x-processing-time",       // Remove processing time info
+            "x-cache-*"                // Remove cache headers
+        });
+    }
+});
+
+// Add gRPC client service for microservice communication
+builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
 
 // Add HttpClient for API key validation middleware
 builder.Services.AddHttpClient();
@@ -47,8 +91,11 @@ var app = builder.Build();
 // Enable CORS
 app.UseCors("AllowDocumentation");
 
-// Add HTTP-based API key validation middleware
-app.UseMiddleware<ApiKeyValidationMiddleware>();
+// Add gRPC-based API key validation middleware (BEFORE header sanitization)
+app.UseMiddleware<GrpcApiKeyValidationMiddleware>();
+
+// Add header sanitization middleware (after API key validation)
+app.UseHeaderSanitization();
 
 // Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
@@ -76,15 +123,11 @@ app.Use(async (context, next) =>
 
     await next();
 
-    // Remove service headers from response (clean up after gateway)
+    // Note: Service headers are automatically removed by HeaderSanitizationMiddleware
+    // This manual cleanup is kept for backwards compatibility and explicit logging
     if (context.Response.Headers.ContainsKey("X-Service-Name"))
     {
-        context.Response.Headers.Remove("X-Service-Name");
-        context.Response.Headers.Remove("X-Service-Display-Name");
-        context.Response.Headers.Remove("X-User-Id");
-        context.Response.Headers.Remove("X-User-Name");
-        context.Response.Headers.Remove("X-User-Permissions");
-        logger.LogInformation("🧹 Service headers removed after gateway processing");
+        logger.LogInformation("🧹 Service headers will be sanitized by HeaderSanitizationMiddleware");
     }
 });
 

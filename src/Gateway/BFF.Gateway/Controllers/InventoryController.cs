@@ -1,3 +1,5 @@
+// TODO: Uncomment when Inventory Service is separated
+/*
 using Microsoft.AspNetCore.Mvc;
 using BFF.Gateway.Services;
 using ERP.Contracts.Inventory;
@@ -198,3 +200,4 @@ public class InventoryController : ControllerBase
         }
     }
 }
+*/

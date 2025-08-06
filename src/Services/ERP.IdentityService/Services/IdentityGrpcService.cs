@@ -1,5 +1,5 @@
 using Grpc.Core;
-using ERP.Contracts.Identity;
+using ERP.IdentityService.Contracts;
 
 namespace ERP.IdentityService.Services;
 
@@ -7,7 +7,7 @@ namespace ERP.IdentityService.Services;
 /// gRPC service implementation for Identity Service
 /// Handles API key validation and management via gRPC
 /// </summary>
-public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.IdentityServiceBase
+public class IdentityGrpcService : ERP.IdentityService.Contracts.IdentityService.IdentityServiceBase
 {
     private readonly IApiKeyService _apiKeyService;
     private readonly ILogger<IdentityGrpcService> _logger;
@@ -21,7 +21,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
     /// <summary>
     /// Validates an API key via gRPC
     /// </summary>
-    public override Task<ERP.Contracts.Identity.ValidateApiKeyResponse> ValidateApiKey(ERP.Contracts.Identity.ValidateApiKeyRequest request, ServerCallContext context)
+    public override Task<ERP.IdentityService.Contracts.ValidateApiKeyResponse> ValidateApiKey(ERP.IdentityService.Contracts.ValidateApiKeyRequest request, ServerCallContext context)
     {
         try
         {
@@ -30,7 +30,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
 
             var result = _apiKeyService.ValidateApiKey(request.ApiKey, request.ServiceName, request.Endpoint);
 
-            var response = new ERP.Contracts.Identity.ValidateApiKeyResponse
+            var response = new ERP.IdentityService.Contracts.ValidateApiKeyResponse
             {
                 IsValid = result.IsValid,
                 UserId = result.UserId,
@@ -57,7 +57,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
         {
             _logger.LogError(ex, "❌ Error in gRPC ValidateApiKey");
             
-            var errorResponse = new ERP.Contracts.Identity.ValidateApiKeyResponse
+            var errorResponse = new ERP.IdentityService.Contracts.ValidateApiKeyResponse
             {
                 IsValid = false,
                 ErrorMessage = "Internal server error during validation"
@@ -70,7 +70,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
     /// <summary>
     /// Creates a new API key via gRPC
     /// </summary>
-    public override Task<ERP.Contracts.Identity.CreateApiKeyResponse> CreateApiKey(ERP.Contracts.Identity.CreateApiKeyRequest request, ServerCallContext context)
+    public override Task<ERP.IdentityService.Contracts.CreateApiKeyResponse> CreateApiKey(ERP.IdentityService.Contracts.CreateApiKeyRequest request, ServerCallContext context)
     {
         try
         {
@@ -79,7 +79,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
             var permissions = request.Permissions.ToArray();
             var result = _apiKeyService.CreateApiKey(request.UserName, request.Description, permissions, request.ExpiresInDays);
 
-            var response = new ERP.Contracts.Identity.CreateApiKeyResponse
+            var response = new ERP.IdentityService.Contracts.CreateApiKeyResponse
             {
                 ApiKey = result.ApiKey,
                 KeyId = result.KeyId,
@@ -103,7 +103,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
         {
             _logger.LogError(ex, "❌ Error in gRPC CreateApiKey");
             
-            var errorResponse = new ERP.Contracts.Identity.CreateApiKeyResponse
+            var errorResponse = new ERP.IdentityService.Contracts.CreateApiKeyResponse
             {
                 ApiKey = string.Empty,
                 KeyId = string.Empty,
@@ -118,7 +118,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
     /// <summary>
     /// Revokes an API key via gRPC
     /// </summary>
-    public override Task<ERP.Contracts.Identity.RevokeApiKeyResponse> RevokeApiKey(ERP.Contracts.Identity.RevokeApiKeyRequest request, ServerCallContext context)
+    public override Task<ERP.IdentityService.Contracts.RevokeApiKeyResponse> RevokeApiKey(ERP.IdentityService.Contracts.RevokeApiKeyRequest request, ServerCallContext context)
     {
         try
         {
@@ -126,7 +126,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
 
             var result = _apiKeyService.RevokeApiKey(request.ApiKey);
 
-            var response = new ERP.Contracts.Identity.RevokeApiKeyResponse
+            var response = new ERP.IdentityService.Contracts.RevokeApiKeyResponse
             {
                 Success = result.Success,
                 Message = result.Message
@@ -147,7 +147,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
         {
             _logger.LogError(ex, "❌ Error in gRPC RevokeApiKey");
             
-            var errorResponse = new ERP.Contracts.Identity.RevokeApiKeyResponse
+            var errorResponse = new ERP.IdentityService.Contracts.RevokeApiKeyResponse
             {
                 Success = false,
                 Message = "Internal server error during API key revocation"
@@ -160,7 +160,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
     /// <summary>
     /// Gets API key information via gRPC
     /// </summary>
-    public override Task<ERP.Contracts.Identity.GetApiKeyInfoResponse> GetApiKeyInfo(ERP.Contracts.Identity.GetApiKeyInfoRequest request, ServerCallContext context)
+    public override Task<ERP.IdentityService.Contracts.GetApiKeyInfoResponse> GetApiKeyInfo(ERP.IdentityService.Contracts.GetApiKeyInfoRequest request, ServerCallContext context)
     {
         try
         {
@@ -168,7 +168,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
 
             var result = _apiKeyService.GetApiKeyInfo(request.ApiKey);
 
-            var response = new ERP.Contracts.Identity.GetApiKeyInfoResponse
+            var response = new ERP.IdentityService.Contracts.GetApiKeyInfoResponse
             {
                 KeyId = result.KeyId,
                 UserName = result.UserName,
@@ -190,7 +190,7 @@ public class IdentityGrpcService : ERP.Contracts.Identity.IdentityService.Identi
         {
             _logger.LogError(ex, "❌ Error in gRPC GetApiKeyInfo");
             
-            var errorResponse = new ERP.Contracts.Identity.GetApiKeyInfoResponse
+            var errorResponse = new ERP.IdentityService.Contracts.GetApiKeyInfoResponse
             {
                 KeyId = string.Empty,
                 UserName = string.Empty,

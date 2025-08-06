@@ -1,8 +1,14 @@
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
 builder.Services.AddLogging();
+
+// Add gRPC services
+builder.Services.AddGrpc();
 
 // Add CORS for Documentation service
 builder.Services.AddCors(options =>
@@ -18,12 +24,25 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// Using OpenAPI without Swagger UI
+// Add OpenAPI and Scalar documentation
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "Weather Service API";
+        options.Theme = Scalar.AspNetCore.ScalarTheme.BluePlanet;
+        options.ShowSidebar = true;
+    });
+}
 
 app.UseHttpsRedirection();
 
 // Enable CORS
 app.UseCors("AllowDocumentation");
+
+// Configure gRPC endpoint
+app.MapGrpcService<Playground.WeatherService.Services.WeatherGrpcService>();
 
 // Middleware to log incoming requests
 app.Use(async (context, next) =>
