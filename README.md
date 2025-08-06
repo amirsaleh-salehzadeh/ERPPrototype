@@ -28,10 +28,18 @@ A streamlined Weather Service application built with .NET 10, featuring microser
                         └─────────────────┘
 ```
 
-### 🔐 API Key Validation Pipeline
+### 🔐 Hybrid Authentication Pipeline
 
-The BFF Gateway uses **gRPC** to validate API keys through the Identity Service:
+The BFF Gateway supports **both JWT tokens and API keys** for authentication:
 
+#### JWT Authentication (Recommended)
+1. **Client Request** → BFF Gateway (with `Authorization: Bearer <JWT>` or `X-JWT-Token` header)
+2. **BFF Gateway** → JWT Validation (using RSA public key from Identity Service)
+3. **Header Sanitization** → BFF Gateway removes sensitive headers
+4. **User Context** → BFF Gateway adds user/service headers (`X-User-Id`, `X-Service-Name`, etc.)
+5. **Response** → BFF Gateway → Downstream Service (with sanitized headers)
+
+#### API Key Authentication (Legacy Support)
 1. **Client Request** → BFF Gateway (with `X-API-Key` header)
 2. **BFF Gateway** → Identity Service (gRPC `ValidateApiKey` call on port 5008)
 3. **Identity Service** → Redis (API key lookup and validation)
@@ -47,9 +55,18 @@ The BFF Gateway uses **gRPC** to validate API keys through the Identity Service:
 - **🔐 Identity Service** (HTTP: 5007, gRPC: 5008) - API key validation, user management, and authentication
 - **🗄️ Redis** (Port 6379) - Distributed caching, API key storage, and session management
 
-## 🔑 API Key Authentication
+## 🔑 Authentication Methods
 
-The system uses centralized API key authentication with **gRPC** communication between BFF Gateway and Identity Service:
+The system supports **two authentication methods** with **gRPC** communication between BFF Gateway and Identity Service:
+
+### JWT Token Authentication (Recommended)
+- **RSA-based JWT tokens** with public/private key cryptography
+- **Service tokens** for inter-service communication (1-hour expiration)
+- **User tokens** for client authentication (8-hour expiration)
+- **Stateless validation** using RSA public key verification
+- **Claims-based authorization** with permissions and user context
+
+### API Key Authentication (Legacy Support)
 
 ### Available API Keys
 - **Admin Master**: `LGplFG5SbbcuGStQIBSlf2GGTStli3ZFdcGaMOhA4qM` (admin permissions)
@@ -171,8 +188,30 @@ kubectl apply -f k8s/weather-service.yaml
 ## 🧪 Testing
 
 ### API Testing
+
+#### JWT Authentication Testing (Recommended)
 ```bash
-# Test without API key (should return 401)
+# 1. Generate a test JWT token
+curl -X POST http://localhost:5007/jwt/test-token \
+  -H "Content-Type: application/json" \
+  -d '{"userName": "john.doe", "tokenType": "user", "permissions": ["read", "write"]}'
+
+# 2. Use the JWT token to access services (copy token from step 1)
+curl -i http://localhost:5000/api/weather/weatherforecast \
+  -H "Authorization: Bearer <JWT_TOKEN_FROM_STEP_1>"
+
+# 3. Test service-to-service JWT token
+curl -X POST http://localhost:5007/jwt/test-token \
+  -H "Content-Type: application/json" \
+  -d '{"userName": "WeatherService", "tokenType": "service", "permissions": ["read", "write"]}'
+
+# 4. Get public key for verification
+curl -i http://localhost:5007/jwt/public-key
+```
+
+#### API Key Authentication Testing (Legacy Support)
+```bash
+# Test without authentication (should return 401)
 curl -i http://localhost:5000/api/weather/weatherforecast
 
 # Test with valid API key (should succeed)
@@ -225,9 +264,16 @@ The Weather service includes HPA configuration:
 - Header sanitization removes sensitive data before downstream services
 
 ### Communication Security
-- gRPC communication between BFF Gateway and Identity Service
-- API keys removed from headers before reaching downstream services
-- User context headers added for service-to-service communication
+- **JWT-based authentication** with RSA public/private key cryptography
+- **gRPC communication** between BFF Gateway and Identity Service
+- **Hybrid authentication** supporting both JWT tokens and API keys
+- **Stateless token validation** using RSA public key verification
+- **Automatic key rotation** support for enhanced security
+- **Claims-based authorization** with fine-grained permissions
+- **Token expiration** with configurable lifetimes
+- **Secure key storage** with JSON-based RSA key persistence
+- Authentication tokens removed from headers before reaching downstream services
+- User/service context headers added for downstream communication
 
 ### Container Security
 - Trivy vulnerability scanning in CI/CD

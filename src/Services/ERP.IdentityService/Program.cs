@@ -48,6 +48,13 @@ builder.Services.AddGrpc();
 // Add Identity services - Use Hybrid service that works with or without Redis
 builder.Services.AddSingleton<IApiKeyService, HybridApiKeyService>();
 
+// Add JWT services
+builder.Services.AddSingleton<ICryptographicKeyService, CryptographicKeyService>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+// Add controllers for REST API
+builder.Services.AddControllers();
+
 // Add gRPC service implementation
 builder.Services.AddScoped<IdentityGrpcService>();
 builder.Services.AddSingleton<ApiKeySeederService>();
@@ -58,6 +65,9 @@ var app = builder.Build();
 // Using OpenAPI without Swagger UI
 
 app.UseHttpsRedirection();
+
+// Map controllers for REST API
+app.MapControllers();
 
 // Middleware to log incoming requests
 app.Use(async (context, next) =>

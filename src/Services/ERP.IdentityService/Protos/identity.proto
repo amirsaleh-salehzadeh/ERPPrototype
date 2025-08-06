@@ -8,15 +8,27 @@ package identity;
 service IdentityService {
   // Validate API Key
   rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
-  
+
   // Create new API Key
   rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
-  
+
   // Revoke API Key
   rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
-  
+
   // Get API Key info
   rpc GetApiKeyInfo(GetApiKeyInfoRequest) returns (GetApiKeyInfoResponse);
+
+  // Generate JWT token for service-to-service communication
+  rpc GenerateServiceToken(GenerateServiceTokenRequest) returns (GenerateServiceTokenResponse);
+
+  // Generate JWT token for user authentication
+  rpc GenerateUserToken(GenerateUserTokenRequest) returns (GenerateUserTokenResponse);
+
+  // Validate JWT token
+  rpc ValidateJwtToken(ValidateJwtTokenRequest) returns (ValidateJwtTokenResponse);
+
+  // Get public key for JWT validation
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
 }
 
 // Request/Response messages for API Key validation
@@ -77,4 +89,62 @@ message GetApiKeyInfoResponse {
   int64 expires_at = 6;
   bool is_active = 7;
   int32 usage_count = 8;
+}
+
+// Request/Response messages for generating service JWT tokens
+message GenerateServiceTokenRequest {
+  string service_name = 1;
+  repeated string permissions = 2;
+  int32 expiration_hours = 3; // Optional, defaults to 1 hour
+}
+
+message GenerateServiceTokenResponse {
+  string jwt_token = 1;
+  int64 expires_at = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+// Request/Response messages for generating user JWT tokens
+message GenerateUserTokenRequest {
+  string user_id = 1;
+  string user_name = 2;
+  repeated string permissions = 3;
+  int32 expiration_hours = 4; // Optional, defaults to 8 hours
+}
+
+message GenerateUserTokenResponse {
+  string jwt_token = 1;
+  int64 expires_at = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+// Request/Response messages for validating JWT tokens
+message ValidateJwtTokenRequest {
+  string jwt_token = 1;
+}
+
+message ValidateJwtTokenResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+  string user_name = 3;
+  string service_name = 4;
+  string token_type = 5; // "user" or "service"
+  repeated string permissions = 6;
+  string error_message = 7;
+  int64 expires_at = 8;
+  string token_id = 9; // JWT ID (jti claim)
+}
+
+// Request/Response messages for getting public key
+message GetPublicKeyRequest {
+  // Empty request
+}
+
+message GetPublicKeyResponse {
+  string public_key_pem = 1;
+  string key_id = 2;
+  bool success = 3;
+  string error_message = 4;
 }

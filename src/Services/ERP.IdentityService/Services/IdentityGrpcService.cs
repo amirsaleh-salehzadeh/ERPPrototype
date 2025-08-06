@@ -11,11 +11,13 @@ public class IdentityGrpcService : ERP.IdentityService.Contracts.IdentityService
 {
     private readonly IApiKeyService _apiKeyService;
     private readonly ILogger<IdentityGrpcService> _logger;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public IdentityGrpcService(IApiKeyService apiKeyService, ILogger<IdentityGrpcService> logger)
+    public IdentityGrpcService(IApiKeyService apiKeyService, ILogger<IdentityGrpcService> logger, IJwtTokenService jwtTokenService)
     {
         _apiKeyService = apiKeyService;
         _logger = logger;
+        _jwtTokenService = jwtTokenService;
     }
 
     /// <summary>
@@ -197,6 +199,182 @@ public class IdentityGrpcService : ERP.IdentityService.Contracts.IdentityService
                 Description = "Error retrieving API key information"
             };
             
+            return Task.FromResult(errorResponse);
+        }
+    }
+
+    /// <summary>
+    /// Generates a JWT token for service-to-service communication
+    /// </summary>
+    public override Task<ERP.IdentityService.Contracts.GenerateServiceTokenResponse> GenerateServiceToken(ERP.IdentityService.Contracts.GenerateServiceTokenRequest request, ServerCallContext context)
+    {
+        try
+        {
+            _logger.LogInformation("🎫 gRPC GenerateServiceToken called for service: {ServiceName}", request.ServiceName);
+
+            var expiration = request.ExpirationHours > 0 ? TimeSpan.FromHours(request.ExpirationHours) : TimeSpan.FromHours(1);
+            var token = _jwtTokenService.GenerateServiceToken(request.ServiceName, request.Permissions.ToArray(), expiration);
+            var expiresAt = DateTimeOffset.UtcNow.Add(expiration).ToUnixTimeSeconds();
+
+            var response = new ERP.IdentityService.Contracts.GenerateServiceTokenResponse
+            {
+                JwtToken = token,
+                ExpiresAt = expiresAt,
+                Success = true,
+                ErrorMessage = string.Empty
+            };
+
+            _logger.LogInformation("✅ gRPC Service JWT token generated successfully for service: {ServiceName}", request.ServiceName);
+            return Task.FromResult(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error in gRPC GenerateServiceToken");
+
+            var errorResponse = new ERP.IdentityService.Contracts.GenerateServiceTokenResponse
+            {
+                JwtToken = string.Empty,
+                ExpiresAt = 0,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+
+            return Task.FromResult(errorResponse);
+        }
+    }
+
+    /// <summary>
+    /// Generates a JWT token for user authentication
+    /// </summary>
+    public override Task<ERP.IdentityService.Contracts.GenerateUserTokenResponse> GenerateUserToken(ERP.IdentityService.Contracts.GenerateUserTokenRequest request, ServerCallContext context)
+    {
+        try
+        {
+            _logger.LogInformation("🎫 gRPC GenerateUserToken called for user: {UserName} (ID: {UserId})", request.UserName, request.UserId);
+
+            var expiration = request.ExpirationHours > 0 ? TimeSpan.FromHours(request.ExpirationHours) : TimeSpan.FromHours(8);
+            var token = _jwtTokenService.GenerateUserToken(request.UserId, request.UserName, request.Permissions.ToArray(), expiration);
+            var expiresAt = DateTimeOffset.UtcNow.Add(expiration).ToUnixTimeSeconds();
+
+            var response = new ERP.IdentityService.Contracts.GenerateUserTokenResponse
+            {
+                JwtToken = token,
+                ExpiresAt = expiresAt,
+                Success = true,
+                ErrorMessage = string.Empty
+            };
+
+            _logger.LogInformation("✅ gRPC User JWT token generated successfully for user: {UserName} (ID: {UserId})", request.UserName, request.UserId);
+            return Task.FromResult(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error in gRPC GenerateUserToken");
+
+            var errorResponse = new ERP.IdentityService.Contracts.GenerateUserTokenResponse
+            {
+                JwtToken = string.Empty,
+                ExpiresAt = 0,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+
+            return Task.FromResult(errorResponse);
+        }
+    }
+
+    /// <summary>
+    /// Validates a JWT token
+    /// </summary>
+    public override Task<ERP.IdentityService.Contracts.ValidateJwtTokenResponse> ValidateJwtToken(ERP.IdentityService.Contracts.ValidateJwtTokenRequest request, ServerCallContext context)
+    {
+        try
+        {
+            _logger.LogInformation("🔍 gRPC ValidateJwtToken called");
+
+            var principal = _jwtTokenService.ValidateToken(request.JwtToken);
+
+            if (principal == null)
+            {
+                var invalidResponse = new ERP.IdentityService.Contracts.ValidateJwtTokenResponse
+                {
+                    IsValid = false,
+                    ErrorMessage = "Invalid or expired JWT token"
+                };
+                return Task.FromResult(invalidResponse);
+            }
+
+            var tokenType = principal.FindFirst("token_type")?.Value ?? string.Empty;
+            var userId = principal.FindFirst("user_id")?.Value ?? string.Empty;
+            var userName = principal.FindFirst("user_name")?.Value ?? string.Empty;
+            var serviceName = principal.FindFirst("service_name")?.Value ?? string.Empty;
+            var permissions = principal.FindAll("permission").Select(c => c.Value).ToArray();
+            var tokenId = principal.FindFirst("jti")?.Value ?? string.Empty;
+
+            var response = new ERP.IdentityService.Contracts.ValidateJwtTokenResponse
+            {
+                IsValid = true,
+                UserId = userId,
+                UserName = userName,
+                ServiceName = serviceName,
+                TokenType = tokenType,
+                TokenId = tokenId,
+                ErrorMessage = string.Empty
+            };
+
+            response.Permissions.AddRange(permissions);
+
+            _logger.LogInformation("✅ gRPC JWT token validated successfully, type: {TokenType}", tokenType);
+            return Task.FromResult(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error in gRPC ValidateJwtToken");
+
+            var errorResponse = new ERP.IdentityService.Contracts.ValidateJwtTokenResponse
+            {
+                IsValid = false,
+                ErrorMessage = ex.Message
+            };
+
+            return Task.FromResult(errorResponse);
+        }
+    }
+
+    /// <summary>
+    /// Gets the public key for JWT validation
+    /// </summary>
+    public override Task<ERP.IdentityService.Contracts.GetPublicKeyResponse> GetPublicKey(ERP.IdentityService.Contracts.GetPublicKeyRequest request, ServerCallContext context)
+    {
+        try
+        {
+            _logger.LogInformation("🔑 gRPC GetPublicKey called");
+
+            var publicKeyPem = _jwtTokenService.GetPublicKeyPem();
+
+            var response = new ERP.IdentityService.Contracts.GetPublicKeyResponse
+            {
+                PublicKeyPem = publicKeyPem,
+                KeyId = "erp-identity-validation-key",
+                Success = true,
+                ErrorMessage = string.Empty
+            };
+
+            _logger.LogInformation("✅ gRPC Public key retrieved successfully");
+            return Task.FromResult(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error in gRPC GetPublicKey");
+
+            var errorResponse = new ERP.IdentityService.Contracts.GetPublicKeyResponse
+            {
+                PublicKeyPem = string.Empty,
+                KeyId = string.Empty,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+
             return Task.FromResult(errorResponse);
         }
     }
