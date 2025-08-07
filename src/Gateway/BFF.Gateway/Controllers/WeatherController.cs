@@ -1,9 +1,4 @@
-// TODO: Uncomment when gRPC client issues are resolved
-#if false
 using Microsoft.AspNetCore.Mvc;
-using BFF.Gateway.Services;
-using Playground.WeatherService.Contracts;
-using Google.Protobuf.WellKnownTypes;
 
 namespace BFF.Gateway.Controllers;
 
@@ -11,44 +6,11 @@ namespace BFF.Gateway.Controllers;
 [Route("api/weather")]
 public class WeatherController : ControllerBase
 {
-    private readonly IGrpcClientService _grpcClientService;
     private readonly ILogger<WeatherController> _logger;
 
-    public WeatherController(IGrpcClientService grpcClientService, ILogger<WeatherController> logger)
+    public WeatherController(ILogger<WeatherController> logger)
     {
-        _grpcClientService = grpcClientService;
         _logger = logger;
-    }
-
-    [HttpGet("hello")]
-    public async Task<IActionResult> GetHello()
-    {
-        try
-        {
-            var request = new HelloRequest
-            {
-                UserId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "",
-                UserName = Request.Headers["X-User-Name"].FirstOrDefault() ?? "",
-            };
-            
-            // Add permissions
-            var permissions = Request.Headers["X-User-Permissions"].FirstOrDefault()?.Split(',') ?? Array.Empty<string>();
-            request.Permissions.AddRange(permissions);
-
-            var response = await _grpcClientService.GetWeatherHelloAsync(request);
-            
-            return Ok(new
-            {
-                message = response.Message,
-                service = response.Service,
-                timestamp = response.Timestamp?.ToDateTime()
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling Weather service GetHello");
-            return StatusCode(500, "Internal server error");
-        }
     }
 
     [HttpGet("forecast")]
@@ -56,62 +18,78 @@ public class WeatherController : ControllerBase
     {
         try
         {
-            var request = new WeatherForecastRequest
+            // Print request headers
+            _logger.LogInformation("=== GetWeatherForecast Request Headers ===");
+            foreach (var header in Request.Headers)
             {
-                UserId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "",
-                UserName = Request.Headers["X-User-Name"].FirstOrDefault() ?? "",
-                Days = days
-            };
-            
-            // Add permissions
-            var permissions = Request.Headers["X-User-Permissions"].FirstOrDefault()?.Split(',') ?? Array.Empty<string>();
-            request.Permissions.AddRange(permissions);
+                _logger.LogInformation("Header: {Key} = {Value}", header.Key, string.Join(", ", header.Value.ToArray()));
+            }
 
-            var response = await _grpcClientService.GetWeatherForecastAsync(request);
-            
-            return Ok(new
+            // Print request cookies
+            _logger.LogInformation("=== GetWeatherForecast Request Cookies ===");
+            foreach (var cookie in Request.Cookies)
             {
-                forecasts = response.Forecasts.Select(f => new
-                {
-                    date = f.Date?.ToDateTime(),
-                    temperatureC = f.TemperatureC,
-                    temperatureF = f.TemperatureF,
-                    summary = f.Summary,
-                    humidity = f.Humidity,
-                    windSpeed = f.WindSpeed,
-                    windDirection = f.WindDirection
-                }),
-                generatedBy = response.GeneratedBy,
-                generatedAt = response.GeneratedAt?.ToDateTime()
-            });
+                _logger.LogInformation("Cookie: {Key} = {Value}", cookie.Key, cookie.Value);
+            }
+
+            // Print query parameters
+            _logger.LogInformation("=== GetWeatherForecast Query Parameters ===");
+            foreach (var query in Request.Query)
+            {
+                _logger.LogInformation("Query: {Key} = {Value}", query.Key, string.Join(", ", query.Value.ToArray()));
+            }
+
+            // Print request body info
+            _logger.LogInformation("=== GetWeatherForecast Request Info ===");
+            _logger.LogInformation("Method: {Method}", Request.Method);
+            _logger.LogInformation("Path: {Path}", Request.Path);
+            _logger.LogInformation("QueryString: {QueryString}", Request.QueryString);
+            _logger.LogInformation("ContentType: {ContentType}", Request.ContentType);
+            _logger.LogInformation("ContentLength: {ContentLength}", Request.ContentLength);
+            _logger.LogInformation("Host: {Host}", Request.Host);
+            _logger.LogInformation("Scheme: {Scheme}", Request.Scheme);
+
+            // Extract user information from headers
+            var userId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "anonymous";
+            var userName = Request.Headers["X-User-Name"].FirstOrDefault() ?? "unknown";
+            var permissions = Request.Headers["X-User-Permissions"].FirstOrDefault()?.Split(',') ?? Array.Empty<string>();
+
+            _logger.LogInformation("=== Extracted User Information ===");
+            _logger.LogInformation("UserId: {UserId}", userId);
+            _logger.LogInformation("UserName: {UserName}", userName);
+            _logger.LogInformation("Permissions: {Permissions}", string.Join(", ", permissions));
+
+            // For now, return a mock response since the gRPC service isn't set up
+            var mockResponse = new
+            {
+                message = "Headers and cookies logged successfully",
+                userId = userId,
+                userName = userName,
+                permissions = permissions,
+                requestedDays = days,
+                timestamp = DateTime.UtcNow,
+                note = "This is a mock response - check logs for header/cookie information"
+            };
+
+            return Ok(mockResponse);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling Weather service GetWeatherForecast");
+            _logger.LogError(ex, "Error processing GetWeatherForecast request");
             return StatusCode(500, "Internal server error");
         }
     }
 
-    [HttpGet("health")]
-    public async Task<IActionResult> GetHealth()
+    [HttpGet("test")]
+    public IActionResult TestEndpoint()
     {
-        try
-        {
-            var request = new ERP.Contracts.Weather.HealthRequest();
-            var response = await _grpcClientService.GetWeatherHealthAsync(request);
-            
-            return Ok(new
-            {
-                status = response.Status,
-                service = response.Service,
-                timestamp = response.Timestamp?.ToDateTime()
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling Weather service GetHealth");
-            return StatusCode(500, "Internal server error");
-        }
+        _logger.LogInformation("=== Test Endpoint Called ===");
+        _logger.LogInformation("This endpoint is working and will log all request information");
+        
+        return Ok(new { 
+            message = "Test endpoint working", 
+            timestamp = DateTime.UtcNow,
+            note = "Check the logs for header and cookie information when calling /api/weather/forecast"
+        });
     }
 }
-#endif
