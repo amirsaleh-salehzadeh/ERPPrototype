@@ -1,5 +1,5 @@
 using Grpc.Net.Client;
-using ERP.Contracts.Identity;
+using ERP.IdentityService.Contracts;
 // TODO: Add other service contracts when they are separated
 // using ERP.Contracts.Orders;
 // using ERP.Contracts.Inventory;
@@ -14,7 +14,7 @@ namespace BFF.Gateway.Services;
 public class GrpcClientService : IGrpcClientService, IDisposable
 {
     private readonly GrpcChannel _identityChannel;
-    private readonly ERP.Contracts.Identity.IdentityService.IdentityServiceClient _identityClient;
+    private readonly ERP.IdentityService.Contracts.IdentityService.IdentityServiceClient _identityClient;
     private readonly ILogger<GrpcClientService> _logger;
 
     public GrpcClientService(ILogger<GrpcClientService> logger)
@@ -25,7 +25,7 @@ public class GrpcClientService : IGrpcClientService, IDisposable
         _identityChannel = GrpcChannel.ForAddress("http://localhost:5008"); // Identity service gRPC port
 
         // Create gRPC client for Identity service
-        _identityClient = new ERP.Contracts.Identity.IdentityService.IdentityServiceClient(_identityChannel);
+        _identityClient = new ERP.IdentityService.Contracts.IdentityService.IdentityServiceClient(_identityChannel);
 
         _logger.LogInformation("🔗 gRPC client initialized for Identity service");
     }
