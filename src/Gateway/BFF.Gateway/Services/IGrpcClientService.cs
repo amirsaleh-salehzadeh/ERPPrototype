@@ -1,4 +1,4 @@
-using ERP.Contracts.Identity;
+using ERP.IdentityService.Contracts;
 
 namespace BFF.Gateway.Services;
 
