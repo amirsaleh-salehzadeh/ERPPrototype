@@ -79,9 +79,6 @@ builder.Services.AddHeaderSanitization(options =>
 // Add gRPC client service for microservice communication
 builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
 
-// Add JWT validation service
-builder.Services.AddSingleton<IJwtValidationService, JwtValidationService>();
-
 // Add HttpClient for API key validation middleware
 builder.Services.AddHttpClient();
 
@@ -94,10 +91,10 @@ var app = builder.Build();
 // Enable CORS
 app.UseCors("AllowDocumentation");
 
-// Add hybrid authentication middleware (supports both JWT and API keys)
-app.UseMiddleware<HybridAuthenticationMiddleware>();
+// Add gRPC-based API key validation middleware (BEFORE header sanitization)
+app.UseMiddleware<GrpcApiKeyValidationMiddleware>();
 
-// Add header sanitization middleware (after authentication)
+// Add header sanitization middleware (after API key validation)
 app.UseHeaderSanitization();
 
 // Custom middleware to log service names and remove them from headers
