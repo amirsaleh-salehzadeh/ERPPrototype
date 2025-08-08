@@ -3,6 +3,7 @@ using BFF.Gateway.Services;
 using BFF.Gateway.Models;
 using BFF.Gateway.Middleware;
 using BFF.Gateway.Extensions;
+using BFF.Gateway.Services.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,16 @@ builder.Services.AddHeaderSanitization(options =>
 
 // Add gRPC client service for microservice communication
 builder.Services.AddSingleton<IGrpcClientService, GrpcClientService>();
+
+// Configure RSA encryption for inter-service communication
+builder.Services.Configure<RsaKeyConfiguration>(
+    builder.Configuration.GetSection("RsaEncryption"));
+
+// Add RSA encryption service
+builder.Services.AddSingleton<IRsaEncryptionService, RsaEncryptionService>();
+
+// Add secure HTTP client service
+builder.Services.AddHttpClient<ISecureHttpClientService, SecureHttpClientService>();
 
 // Add HttpClient for API key validation middleware
 builder.Services.AddHttpClient();
