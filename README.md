@@ -1,6 +1,139 @@
-# ERP Weather Service - Pipeline Ready
+# 🏢 ERP Prototype - Complete Microservices Platform
 
-A streamlined Weather Service application built with .NET 10, featuring microservices architecture with API Gateway, centralized authentication, ELK Stack logging, and CI/CD pipeline ready for deployment.
+A comprehensive ERP prototype system built with .NET 10, featuring## 📊 **Complete Observability Stack**
+
+### 🔍 **ELK Stack - Centralized Logging**
+Comprehensive logging pipeline for real-time monitoring and analytics:
+
+#### Features
+- **📝 Request/Response Logging** - Detailed capture of all HTTP traffic with correlation IDs
+- **🏷️ Structured Logging** - JSON-formatted logs with rich metadata and context
+- **⚡ Performance Monitoring** - Response time analysis and bottleneck detection
+- **🎯 Error Tracking** - Exception handling and error correlation
+- **📈 Real-time Dashboards** - Kibana visualizations and operational insights
+
+#### Service URLs
+- **📊 Kibana Dashboard**: http://localhost:5601
+- **🔍 Elasticsearch API**: http://localhost:9200  
+- **🔄 Logstash Pipeline**: http://localhost:5044
+
+### 📈 **Prometheus/Grafana - Metrics & Monitoring**
+Advanced metrics collection and visualization platform:
+
+#### Features
+- **📊 Custom Metrics** - Application-specific performance indicators
+- **🏥 Health Monitoring** - Service availability and readiness checks
+- **⚠️ Alerting Rules** - Proactive issue detection and notification
+- **📈 Performance Dashboards** - Real-time system performance visualization
+- **🔧 Infrastructure Monitoring** - System resources and container metrics
+
+#### Service URLs
+- **📈 Grafana Dashboards**: http://localhost:3000 (admin/admin123)
+- **📊 Prometheus Metrics**: http://localhost:9090
+- **⚠️ Alertmanager**: http://localhost:9093
+- **🖥️ Node Exporter**: http://localhost:9100
+
+### 📱 **SMS/Email Alert System**
+Real-time notification system for critical events:
+
+#### Features
+- **📱 SMS Notifications** - Instant alerts for critical system issues
+- **📧 Email Alerts** - Detailed notifications for warnings and incidents
+- **🔔 Multi-Channel Routing** - Different notification types for different severities
+- **🧪 Test Endpoints** - Validation and testing of notification channels
+
+#### Service URLs
+- **📱 SMS Gateway**: http://localhost:8080/health
+- **🧪 Test SMS**: `POST http://localhost:8080/test-sms`
+- **📧 Test Email**: `POST http://localhost:8080/test-email`
+
+### **Quick Setup - Complete Observability**
+```powershell
+# Start complete infrastructure stack (ELK + Monitoring + Alerts)
+docker-compose up -d
+
+# Verify all services are running
+docker-compose ps
+
+# Check logs from specific service
+docker-compose logs -f sms-gateway
+
+# Test SMS alerts
+Invoke-RestMethod -Uri "http://localhost:8080/test-sms" -Method POST
+
+# Access Kibana for log analysis
+Start-Process "http://localhost:5601"
+
+# Access Grafana for metrics dashboards  
+Start-Process "http://localhost:3000"
+```
+
+### **Management Scripts**
+```powershell
+# Infrastructure management script
+.\manage-infrastructure.ps1 [start|stop|status|test] [all|elk|monitoring|redis]
+
+# Examples:
+.\manage-infrastructure.ps1 start all        # Start everything
+.\manage-infrastructure.ps1 status          # Check all service status
+.\manage-infrastructure.ps1 test            # Test all endpoints
+.\manage-infrastructure.ps1 logs sms -Follow # Follow SMS gateway logs
+```
+
+### **Kibana Log Analysis**
+1. **Open Kibana**: http://localhost:5601
+2. **Navigate**: Go to "Discover" tab
+3. **Index Pattern**: Select "bff-gateway-logs-*"
+4. **Time Range**: Filter by desired time period
+5. **Query Examples**:
+   ```
+   # All BFF Gateway requests
+   service_name:"bff-gateway"
+   
+   # Slow requests (>1 second)
+   response.ElapsedMs:>1000
+   
+   # Error responses
+   response.StatusCode:>=400
+   
+   # Specific API endpoint
+   request.Path:"/api/weather"
+   
+   # By correlation ID
+   correlation_id:"YOUR-CORRELATION-ID"
+   ```
+
+### **Grafana Dashboards**
+1. **Access Grafana**: http://localhost:3000 (admin/admin123)
+2. **Default Dashboards**:
+   - **ERP Services Overview** - Health status and performance metrics
+   - **Infrastructure Monitoring** - System resources and container stats
+   - **Alert Dashboard** - Current alerts and notification status
+3. **Custom Metrics**:
+   - API request rates and response times
+   - Service health and availability
+   - Resource utilization and capacity planningroservices architecture, API Gateway, centralized authentication, observability stack (ELK + Prometheus/Grafana), and production-ready monitoring with SMS alerts.
+
+## 🚀 **What's New - Complete Infrastructure Stack**
+
+### ✅ **Recently Added Components:**
+- **📊 Prometheus/Grafana Monitoring** - Metrics collection and visualization
+- **📱 SMS/Email Alert System** - Real-time notifications for system issues  
+- **🔍 Health Check Endpoints** - Comprehensive service monitoring
+- **📋 Centralized Management** - Single Docker Compose for entire stack
+- **📚 Complete Documentation** - Every file thoroughly commented
+
+### 🎯 **Complete Feature Set:**
+- ✅ **Microservices Architecture** with API Gateway (YARP)
+- ✅ **gRPC Authentication** with centralized API key management
+- ✅ **ELK Stack Logging** with structured logging and correlation IDs
+- ✅ **Prometheus Monitoring** with custom metrics and alerting
+- ✅ **Grafana Dashboards** for real-time system visualization
+- ✅ **SMS/Email Alerts** for critical system events
+- ✅ **Redis Caching** for high-performance data access
+- ✅ **Health Checks** and readiness probes for all services
+- ✅ **Security Middleware** with header sanitization
+- ✅ **CI/CD Ready** with comprehensive testing scripts
 
 ## 🏗️ Architecture Overview
 
@@ -70,10 +203,15 @@ The BFF Gateway implements comprehensive **ELK Stack logging**:
 - **🔐 Identity Service** (HTTP: 5007, gRPC: 5008) - API key validation, user management, and authentication
 - **🗄️ Redis** (Port 6379) - Distributed caching, API key storage, and session management
 
-### Logging & Monitoring Services
+### Observability & Monitoring Services
 - **🔍 Elasticsearch** (Port 9200) - Log storage, search, and analytics engine
 - **📊 Kibana** (Port 5601) - Interactive dashboards and log visualization
 - **🔄 Logstash** (Port 5044) - Log processing and data pipeline
+- **📈 Prometheus** (Port 9090) - Metrics collection and monitoring
+- **📊 Grafana** (Port 3000) - Performance dashboards and visualization
+- **⚠️ Alertmanager** (Port 9093) - Alert routing and notification management
+- **🖥️ Node Exporter** (Port 9100) - System metrics collection
+- **📱 SMS Gateway** (Port 8080) - Real-time SMS/email alert notifications
 
 ## 🔑 API Key Authentication
 

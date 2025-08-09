@@ -1,3 +1,30 @@
+// ============================================================================
+// ERP Prototype - BFF Gateway Application Entry Point
+// ============================================================================
+// Purpose: Main entry point for the Backend-for-Frontend (BFF) Gateway service
+// Author: ERP Development Team
+// Created: 2024
+// 
+// Description:
+// Configures and starts the BFF Gateway service which acts as the main entry
+// point for all client applications. Provides API gateway functionality with
+// YARP reverse proxy, authentication, authorization, logging, and monitoring.
+//
+// Key Features:
+// - YARP reverse proxy for service routing
+// - gRPC-based API key authentication via Identity Service
+// - Request/response logging with ELK Stack integration
+// - Header sanitization and security middleware
+// - Health checks and monitoring endpoints
+// - Service discovery and dynamic routing
+// - Comprehensive error handling and observability
+//
+// Architecture:
+// Client → BFF Gateway → [Identity Service (gRPC), Weather Service, etc.]
+//                     ↓
+//               ELK Stack (Elasticsearch, Logstash, Kibana)
+// ============================================================================
+
 using Yarp.ReverseProxy.Configuration;
 using BFF.Gateway.Services;
 using BFF.Gateway.Models;
@@ -8,7 +35,11 @@ using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 using System.Reflection;
 
-// Configure Serilog early
+// ============================================================================
+// LOGGING CONFIGURATION
+// ============================================================================
+// Configure Serilog early in the application startup process
+// This ensures logging is available during the entire startup sequence
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
     .Enrich.FromLogContext()
@@ -25,7 +56,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // Add Serilog
+    // ============================================================================
+    // SERILOG CONFIGURATION
+    // ============================================================================
+    // Configure Serilog with full application context and ELK Stack integration
     builder.Host.UseSerilog((context, services, configuration) => 
     {
         configuration
