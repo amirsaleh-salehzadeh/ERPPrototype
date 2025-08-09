@@ -98,6 +98,44 @@ builder.Services.AddCors(options =>
 // Add service mapping service
 builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("BFF Gateway is running"))
+    .AddCheck("identity-service", async () =>
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync("http://localhost:5007/health");
+            if (response.IsSuccessStatusCode)
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Identity Service is healthy");
+            }
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Degraded("Identity Service is not responding");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Identity Service check failed", ex);
+        }
+    })
+    .AddCheck("weather-service", async () =>
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync("http://localhost:5001/health");
+            if (response.IsSuccessStatusCode)
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Weather Service is healthy");
+            }
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Degraded("Weather Service is not responding");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Weather Service check failed", ex);
+        }
+    });
+
 // Add header sanitization with configuration from JSON file
 builder.Services.AddHeaderSanitization(options =>
 {
@@ -160,7 +198,74 @@ builder.Services.AddReverseProxy()
     app.UseMiddleware<GrpcApiKeyValidationMiddleware>();
 
     // Add header sanitization middleware (after API key validation)
-    app.UseHeaderSanitization();// Custom middleware to log service names and remove them from headers
+    app.UseHeaderSanitization();
+
+// Health Check endpoints
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "BFF.Gateway",
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") || check.Name == "self",
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "BFF.Gateway",
+            ready = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy,
+            timestamp = DateTime.UtcNow
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// Metrics endpoint for Prometheus
+app.MapGet("/metrics", () =>
+{
+    var metrics = new List<string>
+    {
+        "# HELP bff_gateway_health Health status of the BFF Gateway",
+        "# TYPE bff_gateway_health gauge",
+        "bff_gateway_health 1",
+        "",
+        "# HELP bff_gateway_uptime_seconds Uptime of the BFF Gateway in seconds",
+        "# TYPE bff_gateway_uptime_seconds counter",
+        $"bff_gateway_uptime_seconds {DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+        "",
+        "# HELP bff_gateway_requests_total Total number of requests",
+        "# TYPE bff_gateway_requests_total counter",
+        "bff_gateway_requests_total 0"
+    };
+    
+    return Results.Text(string.Join("\n", metrics), "text/plain");
+})
+.WithName("Metrics")
+.WithTags("Monitoring")
+.ExcludeFromDescription();
+
+// Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();

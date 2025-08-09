@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: erp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - erp-monitoring-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: erp-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - erp-monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: erp-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - erp-monitoring-network
+    restart: unless-stopped
+
+  # SMS Gateway service for sending alerts
+  sms-gateway:
+    image: node:18-alpine
+    container_name: erp-sms-gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./monitoring/sms-gateway:/app
+    working_dir: /app
+    command: ["npm", "start"]
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+    networks:
+      - erp-monitoring-network
+    restart: unless-stopped
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: erp-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - erp-monitoring-network
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+
+networks:
+  erp-monitoring-network:
+    driver: bridge

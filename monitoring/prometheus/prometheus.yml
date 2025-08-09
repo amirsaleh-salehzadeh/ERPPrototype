@@ -1,0 +1,75 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # BFF Gateway
+  - job_name: 'bff-gateway'
+    static_configs:
+      - targets: ['host.docker.internal:5000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
+  # Identity Service (HTTP)
+  - job_name: 'identity-service-http'
+    static_configs:
+      - targets: ['host.docker.internal:5007']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
+  # Identity Service (gRPC)
+  - job_name: 'identity-service-grpc'
+    static_configs:
+      - targets: ['host.docker.internal:5008']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
+  # Weather Service
+  - job_name: 'weather-service'
+    static_configs:
+      - targets: ['host.docker.internal:5001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
+  # Scalar Documentation Service
+  - job_name: 'scalar-docs'
+    static_configs:
+      - targets: ['host.docker.internal:5002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
+  # Health Check Monitoring
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: 
+        - 'host.docker.internal:5000'  # BFF Gateway
+        - 'host.docker.internal:5001'  # Weather Service
+        - 'host.docker.internal:5002'  # Scalar Docs
+        - 'host.docker.internal:5007'  # Identity Service HTTP
+    metrics_path: '/health'
+    scrape_interval: 5s
+    scrape_timeout: 5s

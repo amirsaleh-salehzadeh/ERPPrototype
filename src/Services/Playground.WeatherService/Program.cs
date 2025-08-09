@@ -1,4 +1,6 @@
 using Scalar.AspNetCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddLogging();
+
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Weather Service is running"));
 
 // Add gRPC services
 builder.Services.AddGrpc();
@@ -43,6 +49,71 @@ app.UseCors("AllowDocumentation");
 
 // Configure gRPC endpoint
 app.MapGrpcService<Playground.WeatherService.Services.WeatherGrpcService>();
+
+// Health Check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "WeatherService",
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") || check.Name == "self",
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "WeatherService",
+            ready = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy,
+            timestamp = DateTime.UtcNow
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// Metrics endpoint for Prometheus
+app.MapGet("/metrics", () =>
+{
+    var metrics = new List<string>
+    {
+        "# HELP weather_service_health Health status of the Weather Service",
+        "# TYPE weather_service_health gauge",
+        "weather_service_health 1",
+        "",
+        "# HELP weather_service_uptime_seconds Uptime of the Weather Service in seconds",
+        "# TYPE weather_service_uptime_seconds counter",
+        $"weather_service_uptime_seconds {DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+        "",
+        "# HELP weather_service_requests_total Total number of requests",
+        "# TYPE weather_service_requests_total counter",
+        "weather_service_requests_total 0"
+    };
+    
+    return Results.Text(string.Join("\n", metrics), "text/plain");
+})
+.WithName("Metrics")
+.WithTags("Monitoring")
+.ExcludeFromDescription();
 
 // Middleware to log incoming requests
 app.Use(async (context, next) =>

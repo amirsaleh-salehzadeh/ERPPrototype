@@ -1,5 +1,7 @@
 using ERP.IdentityService.Services;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,26 @@ builder.WebHost.ConfigureKestrel(options =>
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddLogging();
+
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Identity Service is running"))
+    .AddCheck("redis", () =>
+    {
+        try
+        {
+            var redis = builder.Services.BuildServiceProvider().GetService<IConnectionMultiplexer>();
+            if (redis?.IsConnected == true)
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Redis is connected");
+            }
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Degraded("Redis is not connected");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Redis check failed", ex);
+        }
+    });
 
 // Add Redis connection (optional)
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
@@ -80,6 +102,71 @@ app.Use(async (context, next) =>
 
 // Configure gRPC endpoint
 app.MapGrpcService<IdentityGrpcService>();
+
+// Health Check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "IdentityService",
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") || check.Name == "self",
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            service = "IdentityService",
+            ready = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy,
+            timestamp = DateTime.UtcNow
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// Metrics endpoint for Prometheus
+app.MapGet("/metrics", () =>
+{
+    var metrics = new List<string>
+    {
+        "# HELP identity_service_health Health status of the Identity Service",
+        "# TYPE identity_service_health gauge",
+        "identity_service_health 1",
+        "",
+        "# HELP identity_service_uptime_seconds Uptime of the Identity Service in seconds",
+        "# TYPE identity_service_uptime_seconds counter",
+        $"identity_service_uptime_seconds {DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+        "",
+        "# HELP identity_service_requests_total Total number of requests",
+        "# TYPE identity_service_requests_total counter",
+        "identity_service_requests_total 0"
+    };
+    
+    return Results.Text(string.Join("\n", metrics), "text/plain");
+})
+.WithName("Metrics")
+.WithTags("Monitoring")
+.ExcludeFromDescription();
 
 // Hello World endpoint
 app.MapGet("/hello", () => new { Message = "Hello from Identity Service!", Service = "IdentityService", Timestamp = DateTime.UtcNow })
