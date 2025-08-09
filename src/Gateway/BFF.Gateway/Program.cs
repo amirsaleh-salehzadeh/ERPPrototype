@@ -3,14 +3,76 @@ using BFF.Gateway.Services;
 using BFF.Gateway.Models;
 using BFF.Gateway.Middleware;
 using BFF.Gateway.Extensions;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.Elasticsearch;
+using System.Reflection;
 
-var builder = WebApplication.CreateBuilder(args);
+// Configure Serilog early
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithProcessId()
+    .Enrich.WithThreadId()
+    .Enrich.WithProperty("Application", "BFF.Gateway")
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")
+    .CreateBootstrapLogger();
 
-// Load service mappings from JSON file
-builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
+try
+{
+    Log.Information("🚀 Starting BFF Gateway application");
 
-// Load header sanitization configuration
-builder.Configuration.AddJsonFile("headersanitization.json", optional: true, reloadOnChange: true);
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Add Serilog
+    builder.Host.UseSerilog((context, services, configuration) => 
+    {
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .Enrich.WithMachineName()
+            .Enrich.WithProcessId()
+            .Enrich.WithThreadId()
+            .Enrich.WithProperty("Application", "BFF.Gateway")
+            .Enrich.WithProperty("Version", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown")
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}")
+            .WriteTo.File("logs/bff-gateway-.log", 
+                rollingInterval: RollingInterval.Day, 
+                retainedFileCountLimit: 7,
+                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}");
+
+        // Try to add Elasticsearch sink, but don't fail if Elasticsearch is not available
+        try
+        {
+            var elasticsearchUri = context.Configuration["Elasticsearch:Uri"] ?? "http://localhost:9200";
+            var indexFormat = context.Configuration["Elasticsearch:IndexFormat"] ?? "bff-gateway-logs-{0:yyyy.MM.dd}";
+            
+            configuration.WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(elasticsearchUri))
+            {
+                IndexFormat = indexFormat,
+                AutoRegisterTemplate = bool.Parse(context.Configuration["Elasticsearch:AutoRegisterTemplate"] ?? "true"),
+                NumberOfShards = int.Parse(context.Configuration["Elasticsearch:NumberOfShards"] ?? "1"),
+                NumberOfReplicas = int.Parse(context.Configuration["Elasticsearch:NumberOfReplicas"] ?? "0"),
+                TemplateName = "bff-gateway-template",
+                FailureCallback = (logEvent, exception) => Log.Error("Failed to emit event to Elasticsearch: {Error}", exception?.Message ?? "Unknown error"),
+                EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog
+            });
+            
+            Log.Information("✅ Elasticsearch logging configured for {Uri}", elasticsearchUri);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("⚠️ Elasticsearch not available, using file/console logging only: {Error}", ex.Message);
+        }
+    });
+
+    // Load service mappings from JSON file
+    builder.Configuration.AddJsonFile("servicemapping.json", optional: false, reloadOnChange: true);
+
+    // Load header sanitization configuration
+    builder.Configuration.AddJsonFile("headersanitization.json", optional: true, reloadOnChange: true);
 
 // Add controllers for REST API endpoints
 builder.Services.AddControllers();
@@ -86,18 +148,19 @@ builder.Services.AddHttpClient();
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
-var app = builder.Build();
+    var app = builder.Build();
 
-// Enable CORS
-app.UseCors("AllowDocumentation");
+    // Add request logging middleware first to capture all requests
+    app.UseMiddleware<RequestLoggingMiddleware>();
 
-// Add gRPC-based API key validation middleware (BEFORE header sanitization)
-app.UseMiddleware<GrpcApiKeyValidationMiddleware>();
+    // Enable CORS
+    app.UseCors("AllowDocumentation");
 
-// Add header sanitization middleware (after API key validation)
-app.UseHeaderSanitization();
+    // Add gRPC-based API key validation middleware (BEFORE header sanitization)
+    app.UseMiddleware<GrpcApiKeyValidationMiddleware>();
 
-// Custom middleware to log service names and remove them from headers
+    // Add header sanitization middleware (after API key validation)
+    app.UseHeaderSanitization();// Custom middleware to log service names and remove them from headers
 app.Use(async (context, next) =>
 {
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -148,15 +211,25 @@ app.MapGet("/api/gateway/services", (IServiceMappingService serviceMappingServic
 .WithTags("Gateway")
 .WithSummary("Get all service mappings configured in the gateway");
 
-// Health check endpoint
-app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", Timestamp = DateTime.UtcNow })
-.WithName("GatewayHealthCheck")
-.WithTags("Health");
+    // Health check endpoint
+    app.MapGet("/health", () => new { Status = "Healthy", Service = "BFF.Gateway", Timestamp = DateTime.UtcNow })
+    .WithName("GatewayHealthCheck")
+    .WithTags("Health");
 
-// Map controllers (temporarily disabled to use YARP routing)
-// app.MapControllers();
+    // Map controllers (temporarily disabled to use YARP routing)
+    // app.MapControllers();
 
-// Map YARP reverse proxy
-app.MapReverseProxy();
+    // Map YARP reverse proxy
+    app.MapReverseProxy();
 
-app.Run();
+    Log.Information("🎯 BFF Gateway started successfully");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "💥 BFF Gateway failed to start");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

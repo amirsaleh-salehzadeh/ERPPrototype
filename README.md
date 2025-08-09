@@ -1,6 +1,6 @@
 # ERP Weather Service - Pipeline Ready
 
-A streamlined Weather Service application built with .NET 10, featuring microservices architecture with API Gateway, centralized authentication, and CI/CD pipeline ready for deployment.
+A streamlined Weather Service application built with .NET 10, featuring microservices architecture with API Gateway, centralized authentication, ELK Stack logging, and CI/CD pipeline ready for deployment.
 
 ## 🏗️ Architecture Overview
 
@@ -13,19 +13,33 @@ A streamlined Weather Service application built with .NET 10, featuring microser
 │ • gRPC API Auth │    │ • Health Checks │    │ • API Key Mgmt  │
 │ • Header Sanit. │    │ • Scalar Docs   │    │ • Redis Cache   │
 │ • Rate Limiting │    │ • OpenAPI       │    │ • gRPC Service  │
+│ • ELK Logging   │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │ gRPC ValidateApiKey   │                       │
          └───────────────────────┼───────────────────────┘
                                  │
-                        ┌─────────────────┐
-                        │      Redis      │
-                        │   (Port 6379)   │
-                        │                 │
-                        │ • API Key Store │
-                        │ • User Sessions │
-                        │ • Permissions   │
-                        └─────────────────┘
+        ┌────────────────────────┼─────────────┐
+        │                       │             │
+┌─────────────────┐    ┌─────────────────┐    │
+│  Elasticsearch  │    │      Redis      │    │
+│   (Port 9200)   │    │   (Port 6379)   │    │
+│                 │    │                 │    │
+│ • Log Storage   │    │ • API Key Store │    │
+│ • Search Index  │    │ • User Sessions │    │
+│ • Analytics     │    │ • Permissions   │    │
+└─────────────────┘    └─────────────────┘    │
+         │                                    │
+         │              ┌─────────────────────┘
+         │              │
+┌─────────────────┐    ┌─────────────────┐
+│     Kibana      │    │    Logstash     │
+│   (Port 5601)   │    │   (Port 5044)   │
+│                 │    │                 │
+│ • Dashboards    │    │ • Log Processing│
+│ • Visualizations│    │ • Data Pipeline │
+│ • Log Analysis  │    │ • Filtering     │
+└─────────────────┘    └─────────────────┘
 ```
 
 ### 🔐 API Key Validation Pipeline
@@ -39,13 +53,27 @@ The BFF Gateway uses **gRPC** to validate API keys through the Identity Service:
 5. **User Context** → BFF Gateway adds user headers (`X-User-Id`, `X-User-Name`, `X-User-Permissions`)
 6. **Response** → BFF Gateway → Downstream Service (with sanitized headers)
 
+### 📊 Logging Pipeline
+
+The BFF Gateway implements comprehensive **ELK Stack logging**:
+
+1. **Request Capture** → RequestLoggingMiddleware captures all HTTP requests/responses
+2. **Structured Logging** → Serilog formats logs with correlation IDs and metadata
+3. **Elasticsearch Storage** → Logs are indexed in Elasticsearch with time-based indices
+4. **Kibana Visualization** → Real-time dashboards and analytics for monitoring
+
 ## 🚀 Services
 
 ### Core Services
-- **🚪 BFF Gateway** (Port 5000) - API Gateway with YARP reverse proxy, gRPC authentication, and header sanitization
+- **🚪 BFF Gateway** (Port 5000) - API Gateway with YARP reverse proxy, gRPC authentication, header sanitization, and comprehensive logging
 - **🌤️ Weather Service** (Port 5001) - Weather forecast and meteorological data with Scalar documentation
 - **🔐 Identity Service** (HTTP: 5007, gRPC: 5008) - API key validation, user management, and authentication
 - **🗄️ Redis** (Port 6379) - Distributed caching, API key storage, and session management
+
+### Logging & Monitoring Services
+- **🔍 Elasticsearch** (Port 9200) - Log storage, search, and analytics engine
+- **📊 Kibana** (Port 5601) - Interactive dashboards and log visualization
+- **🔄 Logstash** (Port 5044) - Log processing and data pipeline
 
 ## 🔑 API Key Authentication
 
@@ -71,7 +99,73 @@ curl -X POST "http://localhost:5007/validate" \
   -d '{"ApiKey":"LGplFG5SbbcuGStQIBSlf2GGTStli3ZFdcGaMOhA4qM","ServiceName":"WeatherService","Endpoint":"/weatherforecast"}'
 ```
 
-## 🛠️ Development Setup
+## � ELK Stack Logging
+
+### Overview
+The BFF Gateway implements comprehensive logging using the **ELK Stack** (Elasticsearch, Logstash, Kibana) for real-time monitoring and analytics.
+
+### Features
+- **🔍 Request/Response Logging** - Detailed capture of all HTTP traffic
+- **🏷️ Correlation Tracking** - Unique request IDs for tracing
+- **⚡ Performance Monitoring** - Response time analysis and alerting
+- **🎯 Structured Logging** - JSON-formatted logs with metadata
+- **📈 Real-time Dashboards** - Kibana visualizations and analytics
+
+### Quick Setup
+```powershell
+# Complete ELK setup with BFF Gateway
+.\setup-elk-logging.ps1
+
+# Or step-by-step
+docker-compose -f docker-compose.elk.yml up -d  # Start ELK Stack
+.\elk-management.ps1 start                       # Check services
+dotnet run --project src/Gateway/BFF.Gateway     # Start BFF Gateway
+.\setup-kibana-dashboards.ps1                    # Configure Kibana
+```
+
+### Service URLs
+- **📊 Kibana Dashboard**: http://localhost:5601
+- **🔍 Elasticsearch API**: http://localhost:9200
+- **🔄 Logstash**: http://localhost:5044
+- **🚪 BFF Gateway**: http://localhost:5000
+
+### Kibana Usage
+1. Open **Kibana** at http://localhost:5601
+2. Go to **"Discover"** tab
+3. Select **"bff-gateway-logs-*"** index pattern
+4. Filter by time range and explore logs
+
+### Useful Queries
+```
+# All requests
+service_name:"bff-gateway"
+
+# Slow requests (>1 second)
+response.ElapsedMs:>1000
+
+# Error responses
+response.StatusCode:>=400
+
+# Specific endpoint
+request.Path:"/api/weather"
+
+# By correlation ID
+correlation_id:"YOUR-CORRELATION-ID"
+```
+
+### Management Scripts
+```powershell
+# ELK Stack management
+.\elk-management.ps1 [start|stop|status|kibana|test]
+
+# Setup Kibana dashboards
+.\setup-kibana-dashboards.ps1
+
+# Complete setup
+.\setup-elk-logging.ps1
+```
+
+## �🛠️ Development Setup
 
 ### Prerequisites
 - .NET 10 SDK
@@ -85,6 +179,10 @@ curl -X POST "http://localhost:5007/validate" \
 git clone <repository-url>
 cd ERPPrototype
 
+# Option 1: Complete setup with ELK logging
+./setup-elk-logging.ps1
+
+# Option 2: Basic setup
 # Start Redis (required for API key storage)
 docker run -d --name erp-redis -p 6379:6379 redis:7-alpine
 
