@@ -1,51 +1,90 @@
-const express = require('express');
-const axios = require('axios');
-const bodyParser = require('body-parser');
+// ============================================================================
+// SMS GATEWAY SERVICE FOR ERP PROMETHEUS ALERTS
+// ============================================================================
+// This Node.js application serves as a notification gateway for Prometheus
+// alerts. It receives webhook notifications from Alertmanager and sends
+// SMS messages and emails to configured recipients.
+//
+// Features:
+// - SMS notifications via Twilio (configurable for other providers)
+// - Email notifications via SMTP
+// - Basic authentication for security
+// - Health check endpoint for monitoring
+// - Test endpoints for validation
+//
+// Environment Variables:
+// - TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN: Twilio credentials
+// - SMS_FROM_NUMBER, SMS_TO_NUMBERS: Phone number configuration
+// - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS: Email configuration
+// ============================================================================
+
+const express = require('express');        // Web framework for handling HTTP requests
+const axios = require('axios');            // HTTP client for external API calls
+const bodyParser = require('body-parser'); // Middleware for parsing JSON requests
 
 const app = express();
-app.use(bodyParser.json());
+app.use(bodyParser.json());                // Parse JSON request bodies
 
+// ============================================================================
+// CONFIGURATION - SMS PROVIDER SETTINGS
+// ============================================================================
 // SMS Configuration - Replace with your SMS provider details
 const SMS_CONFIG = {
-  provider: 'twilio', // or 'nexmo', 'aws-sns', etc.
-  accountSid: process.env.TWILIO_ACCOUNT_SID || 'your-account-sid',
-  authToken: process.env.TWILIO_AUTH_TOKEN || 'your-auth-token',
-  fromNumber: process.env.SMS_FROM_NUMBER || '+1234567890',
-  toNumbers: (process.env.SMS_TO_NUMBERS || '+1234567890').split(',')
+  provider: 'twilio',                                                    // SMS provider name
+  accountSid: process.env.TWILIO_ACCOUNT_SID || 'your-account-sid',     // Twilio Account SID
+  authToken: process.env.TWILIO_AUTH_TOKEN || 'your-auth-token',        // Twilio Auth Token
+  fromNumber: process.env.SMS_FROM_NUMBER || '+1234567890',             // Sender phone number
+  toNumbers: (process.env.SMS_TO_NUMBERS || '+1234567890').split(',')   // Recipient phone numbers (comma-separated)
 };
 
-// Email Configuration
+// ============================================================================
+// CONFIGURATION - EMAIL SMTP SETTINGS
+// ============================================================================
+// Email Configuration for SMTP notifications
 const EMAIL_CONFIG = {
-  smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  smtp_port: process.env.SMTP_PORT || 587,
-  smtp_user: process.env.SMTP_USER || 'your-email@gmail.com',
-  smtp_pass: process.env.SMTP_PASS || 'your-app-password',
-  to_emails: (process.env.EMAIL_TO || 'admin@erpprototype.com').split(',')
+  smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com',                 // SMTP server hostname
+  smtp_port: process.env.SMTP_PORT || 587,                             // SMTP port (587 for TLS)
+  smtp_user: process.env.SMTP_USER || 'your-email@gmail.com',          // SMTP username/email
+  smtp_pass: process.env.SMTP_PASS || 'your-app-password',             // SMTP password/app password
+  to_emails: (process.env.EMAIL_TO || 'admin@erpprototype.com').split(',') // Recipient emails (comma-separated)
 };
 
-// Authentication middleware
+// ============================================================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================================================
+// Basic authentication middleware to secure SMS endpoints
+// Uses hardcoded credentials for simplicity (consider using environment variables)
 const authenticate = (req, res, next) => {
   const auth = req.headers.authorization;
+  
+  // Check if Authorization header is present and properly formatted
   if (!auth || !auth.startsWith('Basic ')) {
     return res.status(401).json({ error: 'Authentication required' });
   }
   
+  // Decode base64 credentials and validate
   const credentials = Buffer.from(auth.slice(6), 'base64').toString().split(':');
   const username = credentials[0];
   const password = credentials[1];
   
+  // Validate credentials (admin:sms-secret-key)
   if (username !== 'admin' || password !== 'sms-secret-key') {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
-  next();
+  next(); // Authentication successful, proceed to next middleware
 };
 
-// SMS sending function (Twilio example)
+// ============================================================================
+// SMS SENDING FUNCTIONALITY
+// ============================================================================
+// SMS sending function using Twilio API
+// Supports sending to multiple phone numbers with error handling
 async function sendSMS(message, phoneNumbers) {
-  const twilio = require('twilio');
-  const client = twilio(SMS_CONFIG.accountSid, SMS_CONFIG.authToken);
+  const twilio = require('twilio');                                     // Twilio SDK
+  const client = twilio(SMS_CONFIG.accountSid, SMS_CONFIG.authToken);  // Initialize Twilio client
   
+  // Send SMS to each number in parallel
   const promises = phoneNumbers.map(async (number) => {
     try {
       const result = await client.messages.create({

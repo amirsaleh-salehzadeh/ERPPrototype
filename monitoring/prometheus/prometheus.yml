@@ -1,56 +1,116 @@
+# ============================================================================
+# PROMETHEUS CONFIGURATION
+# ============================================================================
+# This is the main configuration file for Prometheus monitoring system.
+# It defines what metrics to collect, how often to collect them, and 
+# where to send alerts.
+#
+# Documentation: https://prometheus.io/docs/prometheus/latest/configuration/
+# ============================================================================
+
+# Global configuration applied to all scrape jobs
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s          # How often to scrape targets by default (15 seconds)
+  evaluation_interval: 15s      # How often to evaluate alerting rules (15 seconds)
 
+# Alert rule files to load and evaluate
 rule_files:
-  - "alert_rules.yml"
+  - "alert_rules.yml"           # Load alert rules from this file
 
+# Alerting configuration - where to send alerts
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+          - alertmanager:9093   # Alertmanager service endpoint (Docker network)
 
+# Scrape configurations - what endpoints to monitor
 scrape_configs:
-  # Prometheus itself
+  # ========================================
+  # INFRASTRUCTURE MONITORING
+  # ========================================
+  
+  # Monitor Prometheus itself (self-monitoring)
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['localhost:9090']    # Prometheus metrics endpoint
 
-  # Node Exporter for system metrics
+  # Monitor system metrics via Node Exporter
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['node-exporter:9100'] # Node Exporter in Docker network
+    # Collects: CPU, memory, disk, network statistics
 
-  # BFF Gateway
+  # ========================================
+  # ERP APPLICATION MONITORING
+  # ========================================
+  
+  # BFF Gateway - API Gateway service
   - job_name: 'bff-gateway'
     static_configs:
-      - targets: ['host.docker.internal:5000']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
-    scrape_timeout: 10s
+      - targets: ['host.docker.internal:5000']  # BFF Gateway running on host
+    metrics_path: '/metrics'            # Metrics endpoint path
+    scrape_interval: 10s               # Scrape every 10 seconds (more frequent)
+    scrape_timeout: 10s                # Timeout for scrape requests
 
-  # Identity Service (HTTP)
+  # Identity Service (HTTP endpoint)
   - job_name: 'identity-service-http'
     static_configs:
-      - targets: ['host.docker.internal:5007']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
+      - targets: ['host.docker.internal:5007']  # Identity service HTTP port
+    metrics_path: '/metrics'            # Custom metrics endpoint
+    scrape_interval: 10s               # Monitor authentication service frequently
     scrape_timeout: 10s
 
-  # Identity Service (gRPC)
+  # Identity Service (gRPC endpoint)
   - job_name: 'identity-service-grpc'
     static_configs:
-      - targets: ['host.docker.internal:5008']
-    metrics_path: '/metrics'
+      - targets: ['host.docker.internal:5008']  # Identity service gRPC port
+    metrics_path: '/metrics'            # gRPC metrics (if exposed)
     scrape_interval: 10s
     scrape_timeout: 10s
 
-  # Weather Service
+  # Weather Service - Sample microservice
   - job_name: 'weather-service'
     static_configs:
-      - targets: ['host.docker.internal:5001']
-    metrics_path: '/metrics'
+      - targets: ['host.docker.internal:5001']  # Weather service port
+    metrics_path: '/metrics'            # Weather service metrics endpoint
+    scrape_interval: 10s               # Regular monitoring interval
+    scrape_timeout: 10s
+
+  # Scalar Documentation Service - API documentation
+  - job_name: 'scalar-documentation'
+    static_configs:
+      - targets: ['host.docker.internal:5002']  # Documentation service port
+    metrics_path: '/metrics'            # Documentation metrics
+    scrape_interval: 30s               # Less frequent monitoring (documentation service)
+    scrape_timeout: 10s
+
+  # ========================================
+  # HEALTH CHECK MONITORING
+  # ========================================
+  # These jobs monitor the health endpoints of services
+  # for availability and response time metrics
+  
+  # Health check for all ERP services
+  - job_name: 'erp-services-health'
+    static_configs:
+      - targets: 
+        - 'host.docker.internal:5001'   # Weather Service health
+        - 'host.docker.internal:5007'   # Identity Service health
+        - 'host.docker.internal:5000'   # BFF Gateway health
+        - 'host.docker.internal:5002'   # Documentation health
+    metrics_path: '/health'             # Health check endpoint
+    scrape_interval: 5s                # Frequent health monitoring
+    scrape_timeout: 5s
+    
+  # ========================================
+  # NOTES:
+  # ========================================
+  # - host.docker.internal: Allows Docker containers to reach host services
+  # - All ERP services expose /metrics and /health endpoints
+  # - Scrape intervals are tuned based on service criticality
+  # - Timeout values ensure monitoring doesn't hang
+  # ========================================
     scrape_interval: 10s
     scrape_timeout: 10s
 

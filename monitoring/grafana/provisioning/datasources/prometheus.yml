@@ -1,9 +1,34 @@
+# ============================================================================
+# GRAFANA DATASOURCE CONFIGURATION - PROMETHEUS
+# ============================================================================
+# This file configures Prometheus as a data source for Grafana dashboards.
+# It's automatically loaded when Grafana starts up, eliminating the need
+# for manual configuration through the Grafana UI.
+#
+# Path: /etc/grafana/provisioning/datasources/prometheus.yml (in container)
+# Documentation: https://grafana.com/docs/grafana/latest/administration/provisioning/
+# ============================================================================
+
+# API version for Grafana provisioning configuration
 apiVersion: 1
 
+# Data sources configuration
 datasources:
-  - name: Prometheus
-    type: prometheus
-    access: proxy
-    url: http://prometheus:9090
-    isDefault: true
-    editable: true
+  # Primary Prometheus data source configuration
+  - name: Prometheus                    # Display name in Grafana UI
+    type: prometheus                    # Data source type (prometheus plugin)
+    access: proxy                       # Access mode: proxy (Grafana server fetches data)
+                                       # Alternative: direct (browser fetches data)
+    url: http://prometheus:9090         # Prometheus server URL (Docker network hostname)
+    isDefault: true                     # Set as default data source for new dashboards
+    editable: true                      # Allow editing through Grafana UI
+    
+    # Optional: Additional settings that can be uncommented as needed
+    # basicAuth: false                  # Enable basic authentication
+    # basicAuthUser: ""                 # Basic auth username
+    # basicAuthPassword: ""             # Basic auth password
+    # withCredentials: false            # Send credentials with requests
+    # jsonData:                         # Additional JSON configuration
+    #   httpMethod: POST                # HTTP method for queries (GET/POST)
+    #   queryTimeout: 60s               # Query timeout
+    #   timeInterval: 15s               # Default scrape interval

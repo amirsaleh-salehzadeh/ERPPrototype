@@ -1,51 +1,78 @@
+# ============================================================================
+# ERP PROTOTYPE - UNIFIED INFRASTRUCTURE DOCKER COMPOSE
+# ============================================================================
+# This Docker Compose file defines the complete infrastructure stack for the
+# ERP Prototype system, including:
+#
+# 📦 REDIS STACK:      Caching and session storage
+# 📊 ELK STACK:        Centralized logging (Elasticsearch, Logstash, Kibana)
+# 📈 MONITORING STACK: Metrics and alerting (Prometheus, Grafana, Alertmanager)
+# 📱 NOTIFICATION:     SMS/Email gateway for alerts
+# 🔍 SYSTEM METRICS:   Node Exporter for infrastructure monitoring
+#
+# Usage:
+#   docker-compose up -d                    # Start all services
+#   docker-compose up -d redis             # Start only Redis services
+#   docker-compose logs -f prometheus      # View Prometheus logs
+#   docker-compose down                     # Stop all services
+#
+# Management:
+#   Use the manage-infrastructure.ps1 script for easier management
+# ============================================================================
+
 services:
   # ===========================
-  # REDIS SERVICES
+  # REDIS SERVICES - Caching & Session Storage
   # ===========================
+  
+  # Redis server for caching and session management
   redis:
-    image: redis:7-alpine
-    container_name: erp-redis
+    image: redis:7-alpine                     # Lightweight Redis image
+    container_name: erp-redis                # Container name for easy reference
     ports:
-      - "6379:6379"
+      - "6379:6379"                          # Expose Redis port to host
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes --requirepass ""
-    restart: unless-stopped
-    healthcheck:
+      - redis_data:/data                     # Persist Redis data
+    command: redis-server --appendonly yes --requirepass ""  # Enable persistence, no password
+    restart: unless-stopped                  # Auto-restart unless manually stopped
+    healthcheck:                             # Health check for monitoring
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      interval: 10s                          # Check every 10 seconds
+      timeout: 3s                            # 3 second timeout
+      retries: 3                             # Retry 3 times before marking unhealthy
     networks:
-      - erp-network
+      - erp-network                          # Connect to shared network
 
+  # Redis web UI for management and monitoring
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: erp-redis-commander
     environment:
-      - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOSTS=local:redis:6379         # Connect to Redis service
     ports:
-      - "8081:8081"
+      - "8081:8081"                          # Web UI port
     depends_on:
-      - redis
+      - redis                                # Wait for Redis to start
     networks:
       - erp-network
 
   # ===========================
-  # ELK STACK (Logging)
+  # ELK STACK - Centralized Logging Platform
   # ===========================
+  
+  # Elasticsearch: Log storage and search engine
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: erp-elasticsearch
     environment:
-      - node.name=elasticsearch
-      - cluster.name=erp-cluster
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - xpack.security.enabled=false
+      - node.name=elasticsearch              # Node name for cluster
+      - cluster.name=erp-cluster             # Cluster name
+      - discovery.type=single-node           # Single node setup (not for production clustering)
+      - bootstrap.memory_lock=true           # Lock memory to prevent swapping
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"         # Java heap size (1GB min/max)
+      - xpack.security.enabled=false         # Disable security for development
       - xpack.security.enrollment.enabled=false
-    ulimits:
+    ulimits:                                 # Memory lock limits for performance
       memlock:
         soft: -1
         hard: -1

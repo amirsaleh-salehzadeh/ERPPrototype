@@ -1,46 +1,82 @@
+# ============================================================================
+# ALERTMANAGER CONFIGURATION
+# ============================================================================
+# This file configures how Prometheus alerts are processed, grouped, and
+# routed to different notification channels (SMS, email, webhooks).
+#
+# Key concepts:
+# - Routes: Define how alerts are matched and where they go
+# - Receivers: Define notification endpoints (SMS, email, webhooks)
+# - Inhibition: Prevent lower-priority alerts when higher-priority ones fire
+#
+# Documentation: https://prometheus.io/docs/alerting/latest/configuration/
+# ============================================================================
+
+# Global configuration applied to all notification types
 global:
-  smtp_smarthost: 'localhost:587'
-  smtp_from: 'alerts@erpprototype.com'
+  smtp_smarthost: 'localhost:587'              # SMTP server for email notifications
+  smtp_from: 'alerts@erpprototype.com'         # From address for email alerts
 
+# ============================================================================
+# ROUTING CONFIGURATION
+# ============================================================================
+# Defines how alerts are grouped, timed, and routed to receivers
 route:
-  group_by: ['alertname']
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 1h
-  receiver: 'web.hook'
+  group_by: ['alertname']                       # Group alerts by alert name
+  group_wait: 30s                              # Wait 30s before sending initial notification
+  group_interval: 5m                           # Wait 5min before sending additional alerts
+  repeat_interval: 1h                          # Repeat notifications every hour
+  receiver: 'web.hook'                         # Default receiver for unmatched alerts
+  
+  # Sub-routes for specific alert types
   routes:
+    # Critical alerts go to SMS for immediate attention
     - match:
-        severity: critical
-      receiver: 'sms-alerts'
-      group_wait: 10s
-      repeat_interval: 10m
+        severity: critical                      # Match alerts with critical severity
+      receiver: 'sms-alerts'                   # Send to SMS notification receiver
+      group_wait: 10s                          # Faster notification for critical issues
+      repeat_interval: 10m                     # More frequent repeats for critical alerts
+    
+    # Warning alerts go to email for non-urgent issues
     - match:
-        severity: warning
-      receiver: 'email-alerts'
+        severity: warning                       # Match alerts with warning severity
+      receiver: 'email-alerts'                 # Send to email notification receiver
 
+# ============================================================================
+# NOTIFICATION RECEIVERS
+# ============================================================================
+# Define how and where to send notifications
 receivers:
+  # Default webhook receiver for testing and debugging
   - name: 'web.hook'
     webhook_configs:
-      - url: 'http://sms-gateway:8080/webhook'
-        send_resolved: true
+      - url: 'http://sms-gateway:8080/webhook'  # Generic webhook endpoint
+        send_resolved: true                     # Send notification when alert resolves
 
+  # SMS alerts for critical issues
   - name: 'sms-alerts'
     webhook_configs:
-      - url: 'http://sms-gateway:8080/sms'
-        send_resolved: true
+      - url: 'http://sms-gateway:8080/sms'      # SMS endpoint on gateway service
+        send_resolved: true                     # Notify when issue is resolved
         http_config:
-          basic_auth:
+          basic_auth:                           # Authentication for SMS endpoint
             username: 'admin'
             password: 'sms-secret-key'
 
+  # Email alerts for warning-level issues
   - name: 'email-alerts'
     webhook_configs:
-      - url: 'http://sms-gateway:8080/email'
-        send_resolved: true
+      - url: 'http://sms-gateway:8080/email'    # Email endpoint on gateway service
+        send_resolved: true                     # Notify when issue is resolved
 
+# ============================================================================
+# INHIBITION RULES
+# ============================================================================
+# Prevent lower-priority alerts when higher-priority ones are active
+# This reduces alert fatigue by suppressing redundant notifications
 inhibit_rules:
-  - source_match:
+  - source_match:                               # If a critical alert is firing...
       severity: 'critical'
-    target_match:
+    target_match:                               # ...suppress warning alerts...
       severity: 'warning'
-    equal: ['alertname', 'instance']
+    equal: ['alertname', 'instance']            # ...for the same alert and instance
