@@ -1,0 +1,47 @@
+# Development override for Docker Compose
+# This file provides development-specific configurations
+# Use: docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+
+services:
+  # Development overrides for faster startup and debugging
+  elasticsearch:
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # Reduced memory for development
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./logs/elasticsearch:/usr/share/elasticsearch/logs  # Map logs to host
+    
+  logstash:
+    environment:
+      - LS_JAVA_OPTS=-Xms128m -Xmx256m  # Reduced memory for development
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logstash/config:/usr/share/logstash/config
+      - ./logs/logstash:/usr/share/logstash/logs  # Map logs to host
+  
+  # Enable debug logging for SMS Gateway in development
+  sms-gateway:
+    environment:
+      - NODE_ENV=development
+      - DEBUG=*
+      - LOG_LEVEL=debug
+    volumes:
+      - ./monitoring/sms-gateway:/app  # Live reload in development
+      - ./logs/sms-gateway:/app/logs  # Map logs to host
+
+  # Development Grafana with additional plugins
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=true  # Allow signup in development
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+      - GF_LOG_LEVEL=debug
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./logs/grafana:/var/log/grafana  # Map logs to host
+
+volumes:
+  elasticsearch_data:
+  grafana_data:
