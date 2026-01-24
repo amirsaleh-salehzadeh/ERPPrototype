@@ -135,7 +135,7 @@ builder.Services.AddSingleton<IServiceMappingService, ServiceMappingService>();
 // Add Health Checks
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("BFF Gateway is running"))
-    .AddCheck("identity-service", async () =>
+    .AddAsyncCheck("identity-service", async () =>
     {
         try
         {
@@ -152,7 +152,7 @@ builder.Services.AddHealthChecks()
             return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Identity Service check failed", ex);
         }
     })
-    .AddCheck("weather-service", async () =>
+    .AddAsyncCheck("weather-service", async () =>
     {
         try
         {
@@ -167,6 +167,23 @@ builder.Services.AddHealthChecks()
         catch (Exception ex)
         {
             return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Weather Service check failed", ex);
+        }
+    })
+    .AddAsyncCheck("image-service", async () =>
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync("http://localhost:5003/health");
+            if (response.IsSuccessStatusCode)
+            {
+                return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Image Service is healthy");
+            }
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Degraded("Image Service is not responding");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Image Service check failed", ex);
         }
     });
 

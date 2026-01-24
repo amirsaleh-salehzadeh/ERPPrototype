@@ -114,7 +114,8 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) 
     var services = new[]
     {
         new { Name = "Weather Service", Url = "http://localhost:5001/swagger/v1/swagger.json" },
-        new { Name = "Identity Service", Url = "http://localhost:5007/swagger/v1/swagger.json" }
+        new { Name = "Identity Service", Url = "http://localhost:5007/swagger/v1/swagger.json" },
+        new { Name = "Image Service", Url = "http://localhost:5003/swagger/v1/swagger.json" }
     };
 
     var aggregatedSpec = new
@@ -122,14 +123,15 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) 
         openapi = "3.0.1",
         info = new
         {
-            title = "ERP Weather Service - Aggregated API",
+            title = "ERP Microservices - Aggregated API",
             version = "v1",
-            description = "Complete API documentation for the ERP Weather Service system"
+            description = "Complete API documentation for the ERP microservices system including Weather, Identity, and Image services"
         },
         servers = new[]
         {
             new { url = "http://localhost:5000", description = "BFF Gateway (Recommended)" },
             new { url = "http://localhost:5001", description = "Weather Service (Direct)" },
+            new { url = "http://localhost:5003", description = "Image Service (Direct)" },
             new { url = "http://localhost:5007", description = "Identity Service (Direct)" }
         },
         paths = new Dictionary<string, object>(),
@@ -150,7 +152,12 @@ app.MapGet("/swagger/v1/swagger-aggregated.json", async (HttpClient httpClient) 
             {
                 foreach (var path in paths.EnumerateObject())
                 {
-                    var pathKey = service.Name == "Weather Service" ? $"/api/weather{path.Name}" : path.Name;
+                    var pathKey = service.Name switch
+                    {
+                        "Weather Service" => $"/api/weather{path.Name}",
+                        "Image Service" => $"/api/images{path.Name.Replace("/images", "")}",
+                        _ => path.Name
+                    };
 
                     // Fix schema references in the path
                     var pathJson = path.Value.GetRawText();

@@ -1,0 +1,41 @@
+@ERP.ImageService_HostAddress = http://localhost:5003
+
+### Health Check
+GET {{ERP.ImageService_HostAddress}}/health
+
+### Readiness Check
+GET {{ERP.ImageService_HostAddress}}/health/ready
+
+### Metrics
+GET {{ERP.ImageService_HostAddress}}/metrics
+
+### Hello World
+GET {{ERP.ImageService_HostAddress}}/hello
+
+### List all images
+GET {{ERP.ImageService_HostAddress}}/images
+
+### Get specific image by ID
+GET {{ERP.ImageService_HostAddress}}/images/sample-image
+
+### Upload image (multipart/form-data)
+POST {{ERP.ImageService_HostAddress}}/images
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./sample-images/test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Delete image by ID
+DELETE {{ERP.ImageService_HostAddress}}/images/sample-image
+
+### Test through BFF Gateway
+GET http://localhost:5000/api/images
+X-API-Key: test-api-key-123
+
+### Get image through BFF Gateway
+GET http://localhost:5000/api/images/sample-image
+X-API-Key: test-api-key-123

@@ -122,13 +122,22 @@ scrape_configs:
     scrape_interval: 10s
     scrape_timeout: 10s
 
+  # Image Service
+  - job_name: 'image-service'
+    static_configs:
+      - targets: ['host.docker.internal:5003']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 10s
+
   # Health Check Monitoring
   - job_name: 'health-checks'
     static_configs:
-      - targets: 
+      - targets:
         - 'host.docker.internal:5000'  # BFF Gateway
         - 'host.docker.internal:5001'  # Weather Service
         - 'host.docker.internal:5002'  # Scalar Docs
+        - 'host.docker.internal:5003'  # Image Service
         - 'host.docker.internal:5007'  # Identity Service HTTP
     metrics_path: '/health'
     scrape_interval: 5s
